@@ -64,7 +64,7 @@ async def create_order(
                 items=[
                     CreateOrderItemCommand(
                         product_id=i.product_id,
-                        quantity=i.quantity,
+                        quantity=i.quantity,quebra
                         unit_price=i.unit_price,
                     )
                     for i in body.items
