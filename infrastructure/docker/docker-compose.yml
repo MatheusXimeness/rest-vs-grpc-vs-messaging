@@ -1,0 +1,83 @@
+services:
+  db_pedidos:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pedidos
+      POSTGRES_PASSWORD: pedidos
+      POSTGRES_DB: pedidos
+    ports:
+      - "5432:5432"
+    volumes:
+      - pedidos_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pedidos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db_estoque:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: estoque
+      POSTGRES_PASSWORD: estoque
+      POSTGRES_DB: estoque
+    ports:
+      - "5433:5432"
+    volumes:
+      - estoque_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U estoque"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  estoque:
+    build:
+      context: ../../services/estoque
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://estoque:estoque@db_estoque:5432/estoque
+    depends_on:
+      db_estoque:
+        condition: service_healthy
+    restart: on-failure
+
+  pedidos:
+    build:
+      context: ../../services/pedidos
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://pedidos:pedidos@db_pedidos:5432/pedidos
+      USE_STUB_SERVICES: "true"
+      USE_STUB_STOCK: "false"
+      ESTOQUE_SERVICE_URL: "http://estoque:8003"
+    depends_on:
+      db_pedidos:
+        condition: service_healthy
+      estoque:
+        condition: service_started
+    restart: on-failure
+
+  collector:
+    build:
+      context: ../../analysis
+      dockerfile: Dockerfile
+    environment:
+      PEDIDOS_URL: "http://pedidos:8000"
+      ESTOQUE_URL: "http://estoque:8003"
+      TIPO: "rest"
+      INTERVALO_COLETA: "10"
+      INTERVALO_LOOP: "300"
+    volumes:
+      - ../../metricas:/app/metricas
+    depends_on:
+      - pedidos
+      - estoque
+
+volumes:
+  pedidos_db:
+  estoque_db:

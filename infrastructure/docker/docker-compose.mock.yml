@@ -1,0 +1,39 @@
+services:
+  estoque:
+    build:
+      context: ../../services/estoque
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      USE_IN_MEMORY_DB: "true"
+
+  pedidos:
+    build:
+      context: ../../services/pedidos
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      USE_IN_MEMORY_DB: "true"
+      USE_STUB_SERVICES: "true"
+      USE_STUB_STOCK: "false"
+      ESTOQUE_SERVICE_URL: "http://estoque:8003"
+    depends_on:
+      - estoque
+
+  collector:
+    build:
+      context: ../../analysis
+      dockerfile: Dockerfile
+    environment:
+      PEDIDOS_URL: "http://pedidos:8000"
+      ESTOQUE_URL: "http://estoque:8003"
+      TIPO: "rest"
+      INTERVALO_COLETA: "10"   # segundos entre as duas coletas para calcular rates
+      INTERVALO_LOOP: "300"    # segundos entre cada rodada de coleta
+    volumes:
+      - ../../metricas:/app/metricas
+    depends_on:
+      - pedidos
+      - estoque
