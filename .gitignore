@@ -1,0 +1,19 @@
+# IDE
+.idea/
+
+# Claude Code
+CLAUDE.md
+
+# Resultados de coleta de métricas (gerados automaticamente)
+metricas/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.venv/
+venv/
+
+# Docker volumes locais
+*.log
