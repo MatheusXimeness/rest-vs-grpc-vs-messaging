@@ -1,4 +1,13 @@
 services:
+  usuario:
+    build:
+      context: ../../services/usuario
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      USE_IN_MEMORY_DB: "true"
+
   estoque:
     build:
       context: ../../services/estoque
@@ -25,12 +34,14 @@ services:
       - "8000:8000"
     environment:
       USE_IN_MEMORY_DB: "true"
-      USE_STUB_SERVICES: "true"
+      USE_STUB_SERVICES: "false"
       USE_STUB_STOCK: "false"
       USE_STUB_PAYMENT: "false"
+      USUARIO_SERVICE_URL: "http://usuario:8001"
       ESTOQUE_SERVICE_URL: "http://estoque:8003"
       PAGAMENTO_SERVICE_URL: "http://pagamento:8002"
     depends_on:
+      - usuario
       - estoque
       - pagamento
 
@@ -39,6 +50,7 @@ services:
       context: ../../analysis
       dockerfile: Dockerfile
     environment:
+      USUARIO_URL: "http://usuario:8001"
       PEDIDOS_URL: "http://pedidos:8000"
       PAGAMENTO_URL: "http://pagamento:8002"
       ESTOQUE_URL: "http://estoque:8003"
@@ -48,6 +60,7 @@ services:
     volumes:
       - ../../metricas:/app/metricas
     depends_on:
+      - usuario
       - pedidos
       - pagamento
       - estoque

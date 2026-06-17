@@ -1,4 +1,33 @@
 services:
+  db_usuario:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: usuario
+      POSTGRES_PASSWORD: usuario
+      POSTGRES_DB: usuario
+    ports:
+      - "5435:5432"
+    volumes:
+      - usuario_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U usuario"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  usuario:
+    build:
+      context: ../../services/usuario
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://usuario:usuario@db_usuario:5432/usuario
+    depends_on:
+      db_usuario:
+        condition: service_healthy
+    restart: on-failure
+
   db_pedidos:
     image: postgres:16-alpine
     environment:
@@ -81,14 +110,17 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://pedidos:pedidos@db_pedidos:5432/pedidos
-      USE_STUB_SERVICES: "true"
+      USE_STUB_SERVICES: "false"
       USE_STUB_STOCK: "false"
       USE_STUB_PAYMENT: "false"
+      USUARIO_SERVICE_URL: "http://usuario:8001"
       ESTOQUE_SERVICE_URL: "http://estoque:8003"
       PAGAMENTO_SERVICE_URL: "http://pagamento:8002"
     depends_on:
       db_pedidos:
         condition: service_healthy
+      usuario:
+        condition: service_started
       estoque:
         condition: service_started
       pagamento:
@@ -101,6 +133,8 @@ services:
       dockerfile: Dockerfile
     environment:
       PEDIDOS_URL: "http://pedidos:8000"
+      USUARIO_URL: "http://usuario:8001"
+      PEDIDOS_URL: "http://pedidos:8000"
       PAGAMENTO_URL: "http://pagamento:8002"
       ESTOQUE_URL: "http://estoque:8003"
       TIPO: "rest"
@@ -109,11 +143,13 @@ services:
     volumes:
       - ../../metricas:/app/metricas
     depends_on:
+      - usuario
       - pedidos
       - pagamento
       - estoque
 
 volumes:
+  usuario_db:
   pedidos_db:
   estoque_db:
   pagamento_db:
