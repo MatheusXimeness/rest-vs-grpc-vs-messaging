@@ -53,7 +53,7 @@ def _stock_service(request: Request) -> IStockServicePort:
 
 
 def _payment_service(request: Request) -> IPaymentServicePort:
-    if request.app.state.settings.USE_STUB_SERVICES:
+    if request.app.state.settings.USE_STUB_PAYMENT:
         from pedidos.infrastructure.clients.stubs.payment_stub import PaymentStubAdapter
         return PaymentStubAdapter()
     from pedidos.infrastructure.clients.http.payment_client import PaymentHttpClient

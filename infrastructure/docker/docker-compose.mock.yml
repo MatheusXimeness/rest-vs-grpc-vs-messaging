@@ -8,6 +8,15 @@ services:
     environment:
       USE_IN_MEMORY_DB: "true"
 
+  pagamento:
+    build:
+      context: ../../services/pagamento
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      USE_IN_MEMORY_DB: "true"
+
   pedidos:
     build:
       context: ../../services/pedidos
@@ -18,9 +27,12 @@ services:
       USE_IN_MEMORY_DB: "true"
       USE_STUB_SERVICES: "true"
       USE_STUB_STOCK: "false"
+      USE_STUB_PAYMENT: "false"
       ESTOQUE_SERVICE_URL: "http://estoque:8003"
+      PAGAMENTO_SERVICE_URL: "http://pagamento:8002"
     depends_on:
       - estoque
+      - pagamento
 
   collector:
     build:
@@ -28,6 +40,7 @@ services:
       dockerfile: Dockerfile
     environment:
       PEDIDOS_URL: "http://pedidos:8000"
+      PAGAMENTO_URL: "http://pagamento:8002"
       ESTOQUE_URL: "http://estoque:8003"
       TIPO: "rest"
       INTERVALO_COLETA: "10"   # segundos entre as duas coletas para calcular rates
@@ -36,4 +49,5 @@ services:
       - ../../metricas:/app/metricas
     depends_on:
       - pedidos
+      - pagamento
       - estoque

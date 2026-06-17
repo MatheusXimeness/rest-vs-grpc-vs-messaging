@@ -44,6 +44,35 @@ services:
         condition: service_healthy
     restart: on-failure
 
+  db_pagamento:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pagamento
+      POSTGRES_PASSWORD: pagamento
+      POSTGRES_DB: pagamento
+    ports:
+      - "5434:5432"
+    volumes:
+      - pagamento_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pagamento"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pagamento:
+    build:
+      context: ../../services/pagamento
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://pagamento:pagamento@db_pagamento:5432/pagamento
+    depends_on:
+      db_pagamento:
+        condition: service_healthy
+    restart: on-failure
+
   pedidos:
     build:
       context: ../../services/pedidos
@@ -54,11 +83,15 @@ services:
       DATABASE_URL: postgresql+asyncpg://pedidos:pedidos@db_pedidos:5432/pedidos
       USE_STUB_SERVICES: "true"
       USE_STUB_STOCK: "false"
+      USE_STUB_PAYMENT: "false"
       ESTOQUE_SERVICE_URL: "http://estoque:8003"
+      PAGAMENTO_SERVICE_URL: "http://pagamento:8002"
     depends_on:
       db_pedidos:
         condition: service_healthy
       estoque:
+        condition: service_started
+      pagamento:
         condition: service_started
     restart: on-failure
 
@@ -68,6 +101,7 @@ services:
       dockerfile: Dockerfile
     environment:
       PEDIDOS_URL: "http://pedidos:8000"
+      PAGAMENTO_URL: "http://pagamento:8002"
       ESTOQUE_URL: "http://estoque:8003"
       TIPO: "rest"
       INTERVALO_COLETA: "10"
@@ -76,8 +110,10 @@ services:
       - ../../metricas:/app/metricas
     depends_on:
       - pedidos
+      - pagamento
       - estoque
 
 volumes:
   pedidos_db:
   estoque_db:
+  pagamento_db:

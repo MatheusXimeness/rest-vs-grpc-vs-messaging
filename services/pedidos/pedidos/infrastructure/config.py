@@ -10,4 +10,5 @@ class Settings(BaseSettings):
     PAGAMENTO_SERVICE_URL: str = "http://pagamento:8002"
     USE_STUB_SERVICES: bool = True
     USE_STUB_STOCK: bool = True
+    USE_STUB_PAYMENT: bool = True
     USE_IN_MEMORY_DB: bool = False
