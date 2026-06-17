@@ -22,6 +22,7 @@ from prometheus_client.parser import text_string_to_metric_families
 
 SERVICES = {
     "pedidos": os.getenv("PEDIDOS_URL", "http://localhost:8000"),
+    "pagamento": os.getenv("PAGAMENTO_URL", "http://localhost:8002"),
     "estoque": os.getenv("ESTOQUE_URL", "http://localhost:8003"),
 }
 
