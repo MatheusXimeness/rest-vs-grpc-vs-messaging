@@ -5,7 +5,7 @@ from estoque.application.ports.outbound import IStockRepository
 from estoque.domain.exceptions import ProductNotFoundError
 from estoque.domain.stock import Stock
 
-
+# so um teste
 class GetStockUseCase(IGetStockUseCase):
     def __init__(self, repo: IStockRepository) -> None:
         self._repo = repo
