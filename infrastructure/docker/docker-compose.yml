@@ -132,12 +132,13 @@ services:
       context: ../../analysis
       dockerfile: Dockerfile
     environment:
-      PEDIDOS_URL: "http://pedidos:8000"
       USUARIO_URL: "http://usuario:8001"
       PEDIDOS_URL: "http://pedidos:8000"
       PAGAMENTO_URL: "http://pagamento:8002"
       ESTOQUE_URL: "http://estoque:8003"
       TIPO: "rest"
+      AMBIENTE: "local"
+      CENARIO: "funcional"
       INTERVALO_COLETA: "10"
       INTERVALO_LOOP: "300"
     volumes:

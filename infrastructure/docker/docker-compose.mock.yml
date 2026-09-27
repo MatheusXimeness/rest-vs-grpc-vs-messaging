@@ -55,6 +55,8 @@ services:
       PAGAMENTO_URL: "http://pagamento:8002"
       ESTOQUE_URL: "http://estoque:8003"
       TIPO: "rest"
+      AMBIENTE: "local"
+      CENARIO: "funcional"
       INTERVALO_COLETA: "10"   # segundos entre as duas coletas para calcular rates
       INTERVALO_LOOP: "300"    # segundos entre cada rodada de coleta
     volumes:

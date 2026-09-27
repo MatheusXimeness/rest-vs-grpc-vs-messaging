@@ -17,6 +17,8 @@ import requests
 import seaborn as sns
 from prometheus_client.parser import text_string_to_metric_families
 
+from exportar import exportar_coleta
+
 # --- Configuração ---
 # URLs configuráveis via env var para funcionar tanto local quanto no Docker
 
@@ -132,6 +134,14 @@ def calc_error_rate(counts: dict) -> float:
     return round((errors / total * 100), 4) if total > 0 else 0.0
 
 
+def calc_error_rate_by_endpoint(counts: dict) -> dict:
+    """Retorna {label_endpoint: % de 4xx/5xx} por endpoint."""
+    by_endpoint: dict[str, dict] = {}
+    for (method, endpoint, status), value in counts.items():
+        by_endpoint.setdefault(f"{method} {endpoint}", {})[(method, endpoint, status)] = value
+    return {label: calc_error_rate(c) for label, c in by_endpoint.items()}
+
+
 def calc_cpu(cpu1: float | None, cpu2: float, interval: float) -> float | None:
     """Retorna uso de CPU em % calculado entre as duas coletas."""
     if cpu1 is None:
@@ -163,6 +173,7 @@ def build_report(snap1: dict, snap2: dict, interval: int) -> dict:
         if cnt2:
             entry["throughput"] = calc_throughput(cnt1, cnt2, interval)
             entry["error_rate"] = calc_error_rate(cnt2)
+            entry["error_rate_endpoint"] = calc_error_rate_by_endpoint(cnt2)
 
         cpu1 = s1["counters"].get("process_cpu_seconds_total") if s1 else None
         cpu2 = s2["counters"].get("process_cpu_seconds_total")
@@ -366,6 +377,10 @@ def main():
                         help="Estratégia de comunicação sendo testada")
     parser.add_argument("--intervalo", type=int, default=10,
                         help="Segundos entre as duas coletas para calcular rates (default: 10)")
+    parser.add_argument("--ambiente", default=os.getenv("AMBIENTE", "local"),
+                        help="Ambiente de execução, ex.: local, nuvem (default: local)")
+    parser.add_argument("--cenario", default=os.getenv("CENARIO", "funcional"),
+                        help="Cenário de carga, ex.: funcional, baixa, moderada, alta, rampup")
     args = parser.parse_args()
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -390,6 +405,16 @@ def main():
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     print(f"\nDados brutos: {json_path}")
+
+    print("\nExportando valores numéricos...")
+    meta = {
+        "estrategia": args.tipo,
+        "ambiente": args.ambiente,
+        "cenario": args.cenario,
+        "timestamp": timestamp,
+        "intervalo_s": args.intervalo,
+    }
+    exportar_coleta(report, meta, output_dir)
 
     print("\nGerando gráficos...")
     plot_latency(report, output_dir)
