@@ -1,8 +1,10 @@
 import time
+from typing import Callable
 
 from prometheus_client import Counter, Histogram
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette.responses import Response
 
 REQUEST_COUNT = Counter(
     "http_requests_total",
@@ -10,26 +12,41 @@ REQUEST_COUNT = Counter(
     ["method", "endpoint", "http_status"],
 )
 
-REQUEST_LATENCY = Histogram(
+REQUEST_DURATION = Histogram(
     "http_request_duration_seconds",
-    "HTTP request latency",
+    "HTTP request duration in seconds",
     ["method", "endpoint"],
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
 )
 
-_EXCLUDED = {"/metrics", "/health"}
+_EXCLUDED_PATHS = {"/metrics", "/health"}
+
+
+def _endpoint_label(request: Request) -> str:
+    # Usa o template da rota (/users/{user_id}) em vez do path literal (/users/1),
+    # para que cada ID não vire uma série distinta nas métricas.
+    route = request.scope.get("route")
+    return getattr(route, "path", None) or "<nao_mapeado>"
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.url.path in _EXCLUDED:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if request.url.path in _EXCLUDED_PATHS:
             return await call_next(request)
 
         start = time.perf_counter()
         response = await call_next(request)
         duration = time.perf_counter() - start
 
-        labels = {"method": request.method, "endpoint": request.url.path}
-        REQUEST_COUNT.labels(**labels, http_status=str(response.status_code)).inc()
-        REQUEST_LATENCY.labels(**labels).observe(duration)
+        endpoint = _endpoint_label(request)
+        REQUEST_DURATION.labels(
+            method=request.method,
+            endpoint=endpoint,
+        ).observe(duration)
+        REQUEST_COUNT.labels(
+            method=request.method,
+            endpoint=endpoint,
+            http_status=str(response.status_code),
+        ).inc()
 
         return response

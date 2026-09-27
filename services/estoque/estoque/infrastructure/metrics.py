@@ -22,6 +22,13 @@ REQUEST_DURATION = Histogram(
 _EXCLUDED_PATHS = {"/metrics", "/health"}
 
 
+def _endpoint_label(request: Request) -> str:
+    # Usa o template da rota (/users/{user_id}) em vez do path literal (/users/1),
+    # para que cada ID não vire uma série distinta nas métricas.
+    route = request.scope.get("route")
+    return getattr(route, "path", None) or "<nao_mapeado>"
+
+
 class MetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         if request.url.path in _EXCLUDED_PATHS:
@@ -31,13 +38,14 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         duration = time.perf_counter() - start
 
+        endpoint = _endpoint_label(request)
         REQUEST_DURATION.labels(
             method=request.method,
-            endpoint=request.url.path,
+            endpoint=endpoint,
         ).observe(duration)
         REQUEST_COUNT.labels(
             method=request.method,
-            endpoint=request.url.path,
+            endpoint=endpoint,
             http_status=str(response.status_code),
         ).inc()
 
