@@ -1,0 +1,4 @@
+# Copie para terraform.tfvars para mudar os padrões (o nuvem.sh já preenche meu_ip).
+# regiao         = "us-east-1"
+# tipo_instancia = "c6i.4xlarge"
+# chave_publica_ssh = "~/.ssh/id_ed25519.pub"

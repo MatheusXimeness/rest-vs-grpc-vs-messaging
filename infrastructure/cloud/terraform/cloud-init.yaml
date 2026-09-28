@@ -1,0 +1,14 @@
+#cloud-config
+# Prepara a VM: Docker Engine + Compose + Buildx pelo script oficial (mesma geração do
+# Docker Desktop local), rsync para receber o código e chrony (NTP) para o relógio.
+package_update: true
+packages:
+  - rsync
+  - curl
+  - chrony
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - systemctl enable --now docker chrony
+  - usermod -aG docker ubuntu
+  - mkdir -p /home/ubuntu/tcc && chown ubuntu:ubuntu /home/ubuntu/tcc
+  - touch /home/ubuntu/.pronto
