@@ -1,5 +1,16 @@
+# Recursos fixos por contêiner (variável de controle do experimento).
+# Os mesmos valores devem ser usados no ambiente em nuvem.
+x-recursos-servico: &recursos-servico
+  cpus: "${CPUS_SERVICO:-1.0}"
+  mem_limit: "${MEM_SERVICO:-512m}"
+
+x-recursos-banco: &recursos-banco
+  cpus: "${CPUS_BANCO:-0.5}"
+  mem_limit: "${MEM_BANCO:-256m}"
+
 services:
   usuario:
+    <<: *recursos-servico
     build:
       context: ../../services/usuario
       dockerfile: Dockerfile
@@ -9,24 +20,29 @@ services:
       USE_IN_MEMORY_DB: "true"
 
   estoque:
+    <<: *recursos-servico
     build:
       context: ../../services/estoque
       dockerfile: Dockerfile
     ports:
       - "8003:8003"
     environment:
+      INITIAL_STOCK_QUANTITY: "${ESTOQUE_INICIAL:-10000000}"
       USE_IN_MEMORY_DB: "true"
 
   pagamento:
+    <<: *recursos-servico
     build:
       context: ../../services/pagamento
       dockerfile: Dockerfile
     ports:
       - "8002:8002"
     environment:
+      RANDOM_SEED: "${SEMENTE:-42}"
       USE_IN_MEMORY_DB: "true"
 
   pedidos:
+    <<: *recursos-servico
     build:
       context: ../../services/pedidos
       dockerfile: Dockerfile
@@ -54,9 +70,10 @@ services:
       PEDIDOS_URL: "http://pedidos:8000"
       PAGAMENTO_URL: "http://pagamento:8002"
       ESTOQUE_URL: "http://estoque:8003"
-      TIPO: "rest"
-      AMBIENTE: "local"
+      TIPO: "${ESTRATEGIA:-rest}"
+      AMBIENTE: "${AMBIENTE:-local}"
       CENARIO: "funcional"
+      COLETA_AUTOMATICA: "${COLETA_AUTOMATICA:-true}"
       INTERVALO_COLETA: "10"   # segundos entre as duas coletas para calcular rates
       INTERVALO_LOOP: "300"    # segundos entre cada rodada de coleta
     volumes:
@@ -66,3 +83,17 @@ services:
       - pedidos
       - pagamento
       - estoque
+
+  # Gerador de carga — só sobe sob demanda (perfil "carga"), via load-tests/k6/executar.sh
+  k6:
+    image: grafana/k6:0.54.0
+    profiles: ["carga"]
+    cpus: "${CPUS_K6:-2.0}"
+    mem_limit: "${MEM_K6:-1g}"
+    environment:
+      BASE_URL: "http://pedidos:8000"
+    volumes:
+      - ../../load-tests/k6:/scripts:ro
+      - ../../metricas:/metricas
+    depends_on:
+      - pedidos
