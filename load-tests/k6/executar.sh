@@ -11,6 +11,7 @@
 #   -m MODO         postgres | mock                   (default: postgres)
 #   -c CENARIOS     lista entre aspas                 (default: "baixa moderada alta rampup")
 #   -r REPETICOES   repetições por cenário            (default: 10)
+#   -s PRIMEIRA     número da primeira repetição      (default: 1; usado pela bateria.sh)
 #   -w AQUECIMENTO  segundos de aquecimento           (default: 30)
 #   -d MEDICAO      segundos de medição               (default: 60)
 #
@@ -29,19 +30,21 @@ AMBIENTE=local
 MODO=postgres
 CENARIOS="baixa moderada alta rampup"
 REPETICOES=10
+PRIMEIRA=1
 AQUECIMENTO=30
 MEDICAO=60
 
-while getopts "e:a:m:c:r:w:d:h" opt; do
+while getopts "e:a:m:c:r:s:w:d:h" opt; do
   case $opt in
     e) ESTRATEGIA=$OPTARG ;;
     a) AMBIENTE=$OPTARG ;;
     m) MODO=$OPTARG ;;
     c) CENARIOS=$OPTARG ;;
     r) REPETICOES=$OPTARG ;;
+    s) PRIMEIRA=$OPTARG ;;
     w) AQUECIMENTO=$OPTARG ;;
     d) MEDICAO=$OPTARG ;;
-    *) sed -n '2,21p' "$0"; exit 1 ;;
+    *) sed -n '2,23p' "$0"; exit 1 ;;
   esac
 done
 
@@ -118,7 +121,7 @@ compose build --quiet
 
 n=0
 for cenario in $CENARIOS; do
-  for rep in $(seq 1 "$REPETICOES"); do
+  for rep in $(seq "$PRIMEIRA" $((PRIMEIRA + REPETICOES - 1))); do
     n=$((n + 1))
     id=$(printf "%s_%s_%s_r%02d_%s" "$ESTRATEGIA" "$AMBIENTE" "$cenario" "$rep" "$(date -u +%Y%m%d_%H%M%S)")
     dir="$RAIZ/metricas/$id"
