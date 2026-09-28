@@ -12,12 +12,13 @@ executado isoladamente para reprocessar coletas antigas e reconsolidar:
 import argparse
 import csv
 import json
+import statistics
 from pathlib import Path
 
 # Endpoints de documentação do FastAPI — não fazem parte do fluxo experimental.
 ENDPOINTS_IGNORADOS_TABELA = {"/docs", "/openapi.json", "/docs/oauth2-redirect", "/redoc"}
 
-COLUNAS_META = ["estrategia", "ambiente", "cenario", "timestamp"]
+COLUNAS_META = ["estrategia", "ambiente", "cenario", "repeticao", "timestamp"]
 
 COLUNAS_ENDPOINTS = COLUNAS_META + [
     "servico", "metodo", "endpoint", "requisicoes",
@@ -26,6 +27,27 @@ COLUNAS_ENDPOINTS = COLUNAS_META + [
 
 COLUNAS_SERVICOS = COLUNAS_META + [
     "servico", "disponivel", "taxa_erro_pct", "cpu_pct", "memoria_mb",
+]
+
+# Métricas do lado do cliente, geradas pelo k6 (load-tests/k6/scenarios/pedidos.js).
+METRICAS_K6 = [
+    "requisicoes", "throughput_rps",
+    "latencia_media_ms", "latencia_mediana_ms", "latencia_p90_ms", "latencia_p95_ms",
+    "latencia_p99_ms", "latencia_min_ms", "latencia_max_ms",
+    "taxa_erro_pct", "taxa_recusa_pct", "taxa_erro_tecnico_pct", "iteracoes_descartadas",
+    "amostras_suspeitas",
+]
+COLUNAS_K6 = COLUNAS_META + ["taxa_alvo_rps", "aquecimento_s", "medicao_s"] + METRICAS_K6
+
+# Métricas resumidas entre repetições (média, desvio padrão, mediana) em resumo_k6.*
+METRICAS_RESUMO = [
+    ("throughput_rps", "Throughput (req/s)", 2),
+    ("latencia_media_ms", "Lat. média (ms)", 3),
+    ("latencia_p95_ms", "Lat. p95 (ms)", 3),
+    ("taxa_erro_tecnico_pct", "Erro técnico (%)", 2),
+    ("taxa_recusa_pct", "Recusa pagamento (%)", 2),
+    ("iteracoes_descartadas", "Iterações descartadas", 1),
+    ("amostras_suspeitas", "Amostras suspeitas", 1),
 ]
 
 
@@ -123,11 +145,16 @@ def tabela_markdown(endpoints: list[dict], servicos: list[dict], meta: dict) -> 
     if len(linhas) == 4:
         linhas.append("| _sem requisições registradas nesta coleta_ | | | | | | | |")
 
+    if "intervalo_s" in meta:
+        nota = ("Métricas do lado do servidor, calculadas na janela entre as duas leituras do coletor "
+                f"({meta['intervalo_s']} s).")
+    else:
+        # Coletas anteriores a esta versão do coletor (latência e erro acumulados).
+        nota = ("Latência e taxa de erro: acumuladas desde o início do processo. "
+                "Throughput e CPU: calculados na janela entre as duas coletas.")
     linhas += [
         "",
-        "Latência e taxa de erro: acumuladas desde o início do processo. "
-        "Throughput e CPU: calculados na janela entre as duas coletas. "
-        "p95 estimado por interpolação nos buckets do histograma Prometheus.",
+        nota + " p95 estimado por interpolação nos buckets do histograma Prometheus.",
         "",
     ]
     return "\n".join(linhas)
@@ -161,16 +188,76 @@ def _coletas(metricas_dir: Path) -> list[Path]:
     return sorted(p for p in metricas_dir.iterdir() if (p / "dados_brutos.json").exists())
 
 
+def exportar_k6(pasta: Path) -> bool:
+    """Converte k6_resumo.json da pasta em k6.csv. Retorna False se não houver resumo."""
+    arquivo = pasta / "k6_resumo.json"
+    if not arquivo.exists():
+        return False
+    resumo = json.loads(arquivo.read_text(encoding="utf-8"))
+    meta = _meta_da_pasta(pasta)
+    linha = {**{k: meta.get(k, "") for k in COLUNAS_META}, **resumo}
+    linha["cenario"] = resumo.get("cenario") or meta.get("cenario", "")
+    _write_csv(pasta / "k6.csv", COLUNAS_K6, [{c: linha.get(c, "") for c in COLUNAS_K6}])
+    return True
+
+
 def reprocessar(metricas_dir: Path):
     for pasta in _coletas(metricas_dir):
         print(f"{pasta.name}:")
         report = json.loads((pasta / "dados_brutos.json").read_text(encoding="utf-8"))
         exportar_coleta(report, _meta_da_pasta(pasta), pasta)
+        if exportar_k6(pasta):
+            print("  → k6.csv")
+
+
+def resumir_k6(linhas: list[dict], destino: Path):
+    """Média, desvio padrão e mediana de cada métrica entre as repetições de um cenário."""
+    grupos: dict[tuple, list[dict]] = {}
+    for linha in linhas:
+        grupos.setdefault((linha["estrategia"], linha["ambiente"], linha["cenario"]), []).append(linha)
+
+    ordem_cenarios = {"baixa": 0, "moderada": 1, "alta": 2, "rampup": 3}
+    chaves = sorted(grupos, key=lambda k: (k[0], k[1], ordem_cenarios.get(k[2], 99), k[2]))
+
+    colunas = ["estrategia", "ambiente", "cenario", "repeticoes"]
+    for metrica, _, _ in METRICAS_RESUMO:
+        colunas += [f"{metrica}_media", f"{metrica}_dp", f"{metrica}_mediana"]
+
+    linhas_csv = []
+    md = [
+        "| Estratégia | Ambiente | Cenário | n | "
+        + " | ".join(titulo for _, titulo, _ in METRICAS_RESUMO) + " |",
+        "|---|---|---|---:|" + "---:|" * len(METRICAS_RESUMO),
+    ]
+    for chave in chaves:
+        grupo = grupos[chave]
+        linha = dict(zip(["estrategia", "ambiente", "cenario"], chave), repeticoes=len(grupo))
+        celulas = []
+        for metrica, _, casas in METRICAS_RESUMO:
+            valores = [float(g[metrica]) for g in grupo if g.get(metrica) not in ("", None)]
+            if not valores:
+                celulas.append("—")
+                continue
+            media = statistics.mean(valores)
+            dp = statistics.stdev(valores) if len(valores) > 1 else 0.0
+            linha[f"{metrica}_media"] = round(media, 4)
+            linha[f"{metrica}_dp"] = round(dp, 4)
+            linha[f"{metrica}_mediana"] = round(statistics.median(valores), 4)
+            celulas.append(f"{_num(media, casas)} ± {_num(dp, casas)}")
+        linhas_csv.append(linha)
+        md.append(f"| {' | '.join(chave)} | {len(grupo)} | " + " | ".join(celulas) + " |")
+
+    md += ["", "Valores: média ± desvio padrão entre as repetições. Medições do lado do cliente (k6), "
+               "excluindo o período de aquecimento.", ""]
+    _write_csv(destino / "resumo_k6.csv", colunas, linhas_csv)
+    (destino / "resumo_k6.md").write_text("\n".join(md), encoding="utf-8")
+    print(f"Resumo entre repetições: {destino / 'resumo_k6.md'} ({len(chaves)} grupos)")
 
 
 def consolidar(metricas_dir: Path, destino: Path):
     destino.mkdir(parents=True, exist_ok=True)
-    for nome, colunas in (("endpoints", COLUNAS_ENDPOINTS), ("servicos", COLUNAS_SERVICOS)):
+    for nome, colunas in (("endpoints", COLUNAS_ENDPOINTS), ("servicos", COLUNAS_SERVICOS),
+                          ("k6", COLUNAS_K6)):
         linhas = []
         for pasta in _coletas(metricas_dir):
             arquivo = pasta / f"{nome}.csv"
@@ -178,8 +265,10 @@ def consolidar(metricas_dir: Path, destino: Path):
                 with open(arquivo, encoding="utf-8") as f:
                     linhas.extend(csv.DictReader(f))
         saida = destino / f"{nome}.csv"
-        _write_csv(saida, colunas, linhas)
+        _write_csv(saida, colunas, [{c: l.get(c, "") for c in colunas} for l in linhas])
         print(f"Consolidado: {saida} ({len(linhas)} linhas)")
+        if nome == "k6" and linhas:
+            resumir_k6(linhas, destino)
 
 
 def main():

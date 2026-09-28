@@ -83,6 +83,25 @@ def _parse_histogram(data: dict, name: str, labels: dict, value: float):
 
 # --- Cálculo de métricas ---
 
+def delta_histogram(hist1: dict, hist2: dict) -> dict:
+    """Histograma apenas das requisições ocorridas entre as duas coletas."""
+    delta = {}
+    for key, h2 in hist2.items():
+        h1 = hist1.get(key, {"buckets": [], "sum": 0.0, "count": 0.0})
+        b1 = dict(h1["buckets"])
+        delta[key] = {
+            "buckets": [(le, cum - b1.get(le, 0.0)) for le, cum in h2["buckets"]],
+            "sum": h2["sum"] - h1["sum"],
+            "count": h2["count"] - h1["count"],
+        }
+    return delta
+
+
+def delta_counts(counts1: dict, counts2: dict) -> dict:
+    """Contadores apenas das requisições ocorridas entre as duas coletas."""
+    return {key: max(0.0, v - counts1.get(key, 0.0)) for key, v in counts2.items()}
+
+
 def calc_latency(histogram: dict) -> dict:
     """Retorna {label_endpoint: {avg_ms, p95_ms, count}} por endpoint."""
     result = {}
@@ -164,16 +183,20 @@ def build_report(snap1: dict, snap2: dict, interval: int) -> dict:
 
         entry: dict = {"disponivel": True}
 
-        hist = s2["histograms"].get("http_request_duration_seconds", {})
-        if hist:
-            entry["latencia"] = calc_latency(hist)
+        # Latência e erro consideram só a janela entre as coletas, para não misturar
+        # aquecimento ou execuções anteriores com o período medido.
+        hist1 = s1["histograms"].get("http_request_duration_seconds", {}) if s1 else {}
+        hist2 = s2["histograms"].get("http_request_duration_seconds", {})
+        if hist2:
+            entry["latencia"] = calc_latency(delta_histogram(hist1, hist2))
 
         cnt1 = s1["counters"].get("http_requests_total", {}) if s1 else {}
         cnt2 = s2["counters"].get("http_requests_total", {})
         if cnt2:
+            janela = delta_counts(cnt1, cnt2)
             entry["throughput"] = calc_throughput(cnt1, cnt2, interval)
-            entry["error_rate"] = calc_error_rate(cnt2)
-            entry["error_rate_endpoint"] = calc_error_rate_by_endpoint(cnt2)
+            entry["error_rate"] = calc_error_rate(janela)
+            entry["error_rate_endpoint"] = calc_error_rate_by_endpoint(janela)
 
         cpu1 = s1["counters"].get("process_cpu_seconds_total") if s1 else None
         cpu2 = s2["counters"].get("process_cpu_seconds_total")
@@ -381,10 +404,19 @@ def main():
                         help="Ambiente de execução, ex.: local, nuvem (default: local)")
     parser.add_argument("--cenario", default=os.getenv("CENARIO", "funcional"),
                         help="Cenário de carga, ex.: funcional, baixa, moderada, alta, rampup")
+    parser.add_argument("--repeticao", type=int, default=None,
+                        help="Número da repetição, quando disparado pelo executor dos testes")
+    parser.add_argument("--saida", type=Path, default=None,
+                        help="Diretório de saída (default: metricas/<tipo>_<timestamp>)")
+    parser.add_argument("--inicio", type=float, default=None,
+                        help="Instante (epoch) da primeira coleta, para alinhar com a medição do k6")
     args = parser.parse_args()
 
+    if args.inicio is not None:
+        time.sleep(max(0.0, args.inicio - time.time()))
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path("metricas") / f"{args.tipo}_{timestamp}"
+    output_dir = args.saida or Path("metricas") / f"{args.tipo}_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n=== Coleta de Métricas — {args.tipo.upper()} ===")
@@ -414,6 +446,8 @@ def main():
         "timestamp": timestamp,
         "intervalo_s": args.intervalo,
     }
+    if args.repeticao is not None:
+        meta["repeticao"] = args.repeticao
     exportar_coleta(report, meta, output_dir)
 
     print("\nGerando gráficos...")
