@@ -84,13 +84,15 @@ esperar_ate() {
 
 # Amostra CPU e memória de cada contêiner durante a janela de medição. Complementa o
 # coletor, que só enxerga os processos Python: aqui entram também bancos e broker.
-# CPU em % de um núcleo (100 = 1 CPU inteira), memória em MB.
+# CPU em % de um núcleo (100 = 1 CPU inteira), memória em MB. Para no fim da janela ou
+# quando o k6 termina (arquivo $3), o que vier primeiro: um salto de relógio no host não
+# estende a amostragem para depois da carga.
 amostrar_recursos() {
-  local arquivo=$1 inicio=$2 fim
+  local arquivo=$1 inicio=$2 sinal_fim=$3 fim
   fim=$(awk -v i="$inicio" -v d="$MEDICAO" 'BEGIN { printf "%.3f", i + d }')
   echo "t,container,cpu_pct,mem_mb" > "$arquivo"
   esperar_ate "$inicio"
-  while awk -v f="$fim" -v t="$(date +%s.%N)" 'BEGIN { exit !(t < f) }'; do
+  while [ ! -e "$sinal_fim" ] && awk -v f="$fim" -v t="$(date +%s.%N)" 'BEGIN { exit !(t < f) }'; do
     # shellcheck disable=SC2046
     docker stats --no-stream --format '{{.Name}};{{.CPUPerc}};{{.MemUsage}}' $(compose ps -q) 2>/dev/null \
       | awk -F';' -v t="$(date +%s)" '{
@@ -141,7 +143,7 @@ for cenario in $CENARIOS; do
     # aquecimento, contado a partir da primeira requisição, e a segunda MEDICAO s depois.
     aguardar_primeira_requisicao
     inicio=$(awk -v t="$(date +%s.%N)" -v a="$AQUECIMENTO" 'BEGIN { printf "%.3f", t + a }')
-    amostrar_recursos "$dir/docker_stats.csv" "$inicio" &
+    amostrar_recursos "$dir/docker_stats.csv" "$inicio" "$dir/.k6_terminou" &
     stats_pid=$!
     compose exec -T collector python coletar_metricas.py \
       --tipo "$ESTRATEGIA" --ambiente "$AMBIENTE" --cenario "$cenario" --repeticao "$rep" \
@@ -149,7 +151,9 @@ for cenario in $CENARIOS; do
       || echo "    AVISO: coletor falhou (ver coletor.log)"
 
     wait "$k6_pid" || echo "    AVISO: k6 terminou com erro (ver k6.log)"
+    touch "$dir/.k6_terminou"
     wait "$stats_pid" || true
+    rm -f "$dir/.k6_terminou"
     [ -f "$dir/k6_resumo.json" ] || echo "    AVISO: k6_resumo.json não foi gerado"
   done
 done
