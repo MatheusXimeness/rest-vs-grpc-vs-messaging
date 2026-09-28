@@ -43,6 +43,30 @@ docker compose -f infrastructure/docker/docker-compose.mock.yml up --build
 docker compose -f infrastructure/docker/docker-compose.yml up --build
 ```
 
+## Testes de carga (k6)
+
+```bash
+# Todos os cenários (baixa, moderada, alta, rampup), 10 repetições cada, modo postgres
+load-tests/k6/executar.sh
+
+# Subconjunto, com menos repetições
+load-tests/k6/executar.sh -c "baixa moderada" -r 5
+
+# Opções: -e estratégia, -a ambiente, -m postgres|mock, -w aquecimento (s), -d medição (s)
+load-tests/k6/executar.sh -h
+```
+
+Cada repetição parte de um ambiente limpo (`down -v` + `up`), aquece por 30 s e mede por 60 s,
+pelo lado do cliente (k6) e do servidor (coletor Prometheus) na mesma janela. Recursos por
+contêiner são fixados nos docker-compose (`CPUS_SERVICO`, `MEM_SERVICO`, `CPUS_BANCO`, `MEM_BANCO`).
+
 ## Métricas coletadas
 
-Latência média, latência p95, throughput, taxa de erro, uso de CPU e memória — coletadas automaticamente pelo serviço `collector` e salvas em `metricas/`.
+Latência média, latência p95, throughput, taxa de erro, uso de CPU e memória, salvas em `metricas/`:
+
+- `k6_resumo.json` / `k6.csv` — medição do cliente (latência exata: média, mediana, p90/p95/p99)
+- `endpoints.csv` / `servicos.csv` / `tabela.md` — medição do servidor, por endpoint e serviço
+- `analysis/data/` — todas as execuções consolidadas, e `resumo_k6.md` com média ± desvio padrão
+  entre repetições
+
+Para reprocessar e reconsolidar: `cd analysis && python exportar.py` (Python 3.10+).
