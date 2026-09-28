@@ -8,6 +8,10 @@ x-recursos-banco: &recursos-banco
   cpus: "${CPUS_BANCO:-0.5}"
   mem_limit: "${MEM_BANCO:-256m}"
 
+x-recursos-broker: &recursos-broker
+  cpus: "${CPUS_BROKER:-1.0}"
+  mem_limit: "${MEM_BROKER:-512m}"
+
 services:
   db_usuario:
     image: postgres:16-alpine
@@ -31,9 +35,12 @@ services:
     build:
       context: ../../services/usuario
       dockerfile: Dockerfile
+      additional_contexts:
+        proto: ../../communication/grpc/proto
     ports:
       - "8001:8001"
     environment:
+      COMMUNICATION_STRATEGY: "${ESTRATEGIA:-rest}"
       DATABASE_URL: postgresql+asyncpg://usuario:usuario@db_usuario:5432/usuario
     depends_on:
       db_usuario:
@@ -79,9 +86,12 @@ services:
     build:
       context: ../../services/estoque
       dockerfile: Dockerfile
+      additional_contexts:
+        proto: ../../communication/grpc/proto
     ports:
       - "8003:8003"
     environment:
+      COMMUNICATION_STRATEGY: "${ESTRATEGIA:-rest}"
       INITIAL_STOCK_QUANTITY: "${ESTOQUE_INICIAL:-10000000}"
       DATABASE_URL: postgresql+asyncpg://estoque:estoque@db_estoque:5432/estoque
     depends_on:
@@ -111,9 +121,12 @@ services:
     build:
       context: ../../services/pagamento
       dockerfile: Dockerfile
+      additional_contexts:
+        proto: ../../communication/grpc/proto
     ports:
       - "8002:8002"
     environment:
+      COMMUNICATION_STRATEGY: "${ESTRATEGIA:-rest}"
       RANDOM_SEED: "${SEMENTE:-42}"
       DATABASE_URL: postgresql+asyncpg://pagamento:pagamento@db_pagamento:5432/pagamento
     depends_on:
@@ -126,9 +139,12 @@ services:
     build:
       context: ../../services/pedidos
       dockerfile: Dockerfile
+      additional_contexts:
+        proto: ../../communication/grpc/proto
     ports:
       - "8000:8000"
     environment:
+      COMMUNICATION_STRATEGY: "${ESTRATEGIA:-rest}"
       DATABASE_URL: postgresql+asyncpg://pedidos:pedidos@db_pedidos:5432/pedidos
       USE_STUB_SERVICES: "false"
       USE_STUB_STOCK: "false"
@@ -146,6 +162,23 @@ services:
       pagamento:
         condition: service_started
     restart: on-failure
+
+  # Broker da estratégia de mensageria. Só sobe com o perfil "mensageria", que o
+  # executor dos testes ativa quando -e mensageria; nas outras estratégias não consome
+  # recursos. Os serviços tentam conectar por até 60 s enquanto ele inicializa.
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    profiles: ["mensageria"]
+    <<: *recursos-broker
+    ports:
+      - "5672:5672"
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-tcc.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   collector:
     build:

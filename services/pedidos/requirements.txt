@@ -2,7 +2,10 @@ fastapi==0.115.5
 uvicorn[standard]==0.32.1
 sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
-httpx==0.28.0
+aiohttp==3.10.10
 pydantic-settings==2.6.1
 prometheus-client==0.21.0
 psutil==6.1.0
+grpcio==1.66.2
+protobuf==5.28.3
+aio-pika==9.4.3

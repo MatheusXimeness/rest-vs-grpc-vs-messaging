@@ -8,15 +8,22 @@ x-recursos-banco: &recursos-banco
   cpus: "${CPUS_BANCO:-0.5}"
   mem_limit: "${MEM_BANCO:-256m}"
 
+x-recursos-broker: &recursos-broker
+  cpus: "${CPUS_BROKER:-1.0}"
+  mem_limit: "${MEM_BROKER:-512m}"
+
 services:
   usuario:
     <<: *recursos-servico
     build:
       context: ../../services/usuario
       dockerfile: Dockerfile
+      additional_contexts:
+        proto: ../../communication/grpc/proto
     ports:
       - "8001:8001"
     environment:
+      COMMUNICATION_STRATEGY: "${ESTRATEGIA:-rest}"
       USE_IN_MEMORY_DB: "true"
 
   estoque:
@@ -24,9 +31,12 @@ services:
     build:
       context: ../../services/estoque
       dockerfile: Dockerfile
+      additional_contexts:
+        proto: ../../communication/grpc/proto
     ports:
       - "8003:8003"
     environment:
+      COMMUNICATION_STRATEGY: "${ESTRATEGIA:-rest}"
       INITIAL_STOCK_QUANTITY: "${ESTOQUE_INICIAL:-10000000}"
       USE_IN_MEMORY_DB: "true"
 
@@ -35,9 +45,12 @@ services:
     build:
       context: ../../services/pagamento
       dockerfile: Dockerfile
+      additional_contexts:
+        proto: ../../communication/grpc/proto
     ports:
       - "8002:8002"
     environment:
+      COMMUNICATION_STRATEGY: "${ESTRATEGIA:-rest}"
       RANDOM_SEED: "${SEMENTE:-42}"
       USE_IN_MEMORY_DB: "true"
 
@@ -46,9 +59,12 @@ services:
     build:
       context: ../../services/pedidos
       dockerfile: Dockerfile
+      additional_contexts:
+        proto: ../../communication/grpc/proto
     ports:
       - "8000:8000"
     environment:
+      COMMUNICATION_STRATEGY: "${ESTRATEGIA:-rest}"
       USE_IN_MEMORY_DB: "true"
       USE_STUB_SERVICES: "false"
       USE_STUB_STOCK: "false"
@@ -60,6 +76,23 @@ services:
       - usuario
       - estoque
       - pagamento
+
+  # Broker da estratégia de mensageria. Só sobe com o perfil "mensageria", que o
+  # executor dos testes ativa quando -e mensageria; nas outras estratégias não consome
+  # recursos. Os serviços tentam conectar por até 60 s enquanto ele inicializa.
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    profiles: ["mensageria"]
+    <<: *recursos-broker
+    ports:
+      - "5672:5672"
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-tcc.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   collector:
     build:
