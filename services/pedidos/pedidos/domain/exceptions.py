@@ -16,3 +16,7 @@ class InsufficientStockError(Exception):
 
 class PaymentFailedError(Exception):
     pass
+
+
+class DependencyUnavailableError(Exception):
+    """Outro serviço não respondeu (conexão recusada, timeout). É falha técnica, não de negócio."""

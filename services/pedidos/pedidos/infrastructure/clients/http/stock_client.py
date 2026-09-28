@@ -1,35 +1,35 @@
-import httpx
+import asyncio
+
+import aiohttp
 
 from pedidos.application.ports.outbound import IStockServicePort, StockReservation
-from pedidos.domain.exceptions import InsufficientStockError
+from pedidos.domain.exceptions import DependencyUnavailableError, InsufficientStockError
 
 
 class StockHttpClient(IStockServicePort):
-    def __init__(self, base_url: str, client: httpx.AsyncClient) -> None:
+    def __init__(self, base_url: str, session: aiohttp.ClientSession) -> None:
         self._base_url = base_url.rstrip("/")
-        self._client = client
+        self._session = session
 
     async def reserve_stock(self, product_id: str, quantity: int) -> StockReservation:
         try:
-            response = await self._client.post(
+            async with self._session.post(
                 f"{self._base_url}/stock/reserve",
                 json={"product_id": product_id, "quantity": quantity},
-            )
-        except httpx.RequestError as exc:
-            raise InsufficientStockError(f"Estoque service unavailable: {exc}") from exc
+            ) as response:
+                if response.status == 404:
+                    raise InsufficientStockError(
+                        f"Product '{product_id}' not found in stock"
+                    )
+                if response.status == 422:
+                    raise InsufficientStockError(
+                        f"Insufficient stock for product '{product_id}'"
+                    )
+                response.raise_for_status()
+                data = await response.json()
+        except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as exc:
+            raise DependencyUnavailableError(f"Estoque service unavailable: {exc!r}") from exc
 
-        if response.status_code == 404:
-            raise InsufficientStockError(
-                f"Product '{product_id}' not found in stock"
-            )
-
-        if response.status_code == 422:
-            raise InsufficientStockError(
-                f"Insufficient stock for product '{product_id}'"
-            )
-
-        response.raise_for_status()
-        data = response.json()
         return StockReservation(
             product_id=data["product_id"],
             quantity=data["quantity"],
@@ -38,9 +38,10 @@ class StockHttpClient(IStockServicePort):
 
     async def release_stock(self, product_id: str, quantity: int) -> None:
         try:
-            await self._client.post(
+            async with self._session.post(
                 f"{self._base_url}/stock/release",
                 json={"product_id": product_id, "quantity": quantity},
-            )
-        except httpx.RequestError:
+            ):
+                pass
+        except (aiohttp.ClientError, asyncio.TimeoutError):
             pass

@@ -13,6 +13,7 @@ from pedidos.application.ports.inbound import (
 from pedidos.application.use_cases.create_order import CreateOrderUseCase
 from pedidos.application.use_cases.get_order import GetOrderUseCase, ListOrdersUseCase
 from pedidos.domain.exceptions import (
+    DependencyUnavailableError,
     InsufficientStockError,
     OrderNotFoundError,
     PaymentFailedError,
@@ -78,6 +79,8 @@ async def create_order(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except PaymentFailedError as exc:
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc))
+    except DependencyUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

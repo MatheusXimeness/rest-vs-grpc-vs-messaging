@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,3 +14,13 @@ class Settings(BaseSettings):
     USE_STUB_STOCK: bool = True
     USE_STUB_PAYMENT: bool = True
     USE_IN_MEMORY_DB: bool = False
+
+    # Estratégia de comunicação com usuário, estoque e pagamento: rest | grpc | mensageria.
+    # A API do próprio pedidos (entrada do k6) continua REST em todas as estratégias.
+    COMMUNICATION_STRATEGY: Literal["rest", "grpc", "mensageria"] = "rest"
+    USUARIO_GRPC_TARGET: str = "usuario:50051"
+    ESTOQUE_GRPC_TARGET: str = "estoque:50051"
+    PAGAMENTO_GRPC_TARGET: str = "pagamento:50051"
+    AMQP_URL: str = "amqp://guest:guest@rabbitmq:5672/"
+    # Espera máxima por resposta de outro serviço; igual nas três estratégias.
+    REQUEST_TIMEOUT_S: float = 10.0

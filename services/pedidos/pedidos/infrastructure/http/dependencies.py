@@ -30,10 +30,21 @@ def get_order_repo(request: Request, session: AsyncSession = Depends(_get_db)) -
     return PostgresOrderRepository(session)
 
 
+# Cada porta de saída tem um adaptador por estratégia de comunicação (http, grpc, amqp).
+# O caso de uso recebe só a interface, então a troca de estratégia não altera o domínio.
+
+
 def _user_service(request: Request) -> IUserServicePort:
-    if request.app.state.settings.USE_STUB_SERVICES:
+    state = request.app.state
+    if state.settings.USE_STUB_SERVICES:
         from pedidos.infrastructure.clients.stubs.user_stub import UserStubAdapter
         return UserStubAdapter()
+    if state.settings.COMMUNICATION_STRATEGY == "grpc":
+        from pedidos.infrastructure.clients.grpc.user_client import UserGrpcClient
+        return UserGrpcClient(state.grpc_stubs.user, state.settings.REQUEST_TIMEOUT_S)
+    if state.settings.COMMUNICATION_STRATEGY == "mensageria":
+        from pedidos.infrastructure.clients.amqp.user_client import UserAmqpClient
+        return UserAmqpClient(state.amqp_rpc)
     from pedidos.infrastructure.clients.http.user_client import UserHttpClient
     return UserHttpClient(
         request.app.state.settings.USUARIO_SERVICE_URL,
@@ -42,9 +53,16 @@ def _user_service(request: Request) -> IUserServicePort:
 
 
 def _stock_service(request: Request) -> IStockServicePort:
-    if request.app.state.settings.USE_STUB_STOCK:
+    state = request.app.state
+    if state.settings.USE_STUB_STOCK:
         from pedidos.infrastructure.clients.stubs.stock_stub import StockStubAdapter
         return StockStubAdapter()
+    if state.settings.COMMUNICATION_STRATEGY == "grpc":
+        from pedidos.infrastructure.clients.grpc.stock_client import StockGrpcClient
+        return StockGrpcClient(state.grpc_stubs.stock, state.settings.REQUEST_TIMEOUT_S)
+    if state.settings.COMMUNICATION_STRATEGY == "mensageria":
+        from pedidos.infrastructure.clients.amqp.stock_client import StockAmqpClient
+        return StockAmqpClient(state.amqp_rpc)
     from pedidos.infrastructure.clients.http.stock_client import StockHttpClient
     return StockHttpClient(
         request.app.state.settings.ESTOQUE_SERVICE_URL,
@@ -53,9 +71,16 @@ def _stock_service(request: Request) -> IStockServicePort:
 
 
 def _payment_service(request: Request) -> IPaymentServicePort:
-    if request.app.state.settings.USE_STUB_PAYMENT:
+    state = request.app.state
+    if state.settings.USE_STUB_PAYMENT:
         from pedidos.infrastructure.clients.stubs.payment_stub import PaymentStubAdapter
         return PaymentStubAdapter()
+    if state.settings.COMMUNICATION_STRATEGY == "grpc":
+        from pedidos.infrastructure.clients.grpc.payment_client import PaymentGrpcClient
+        return PaymentGrpcClient(state.grpc_stubs.payment, state.settings.REQUEST_TIMEOUT_S)
+    if state.settings.COMMUNICATION_STRATEGY == "mensageria":
+        from pedidos.infrastructure.clients.amqp.payment_client import PaymentAmqpClient
+        return PaymentAmqpClient(state.amqp_rpc)
     from pedidos.infrastructure.clients.http.payment_client import PaymentHttpClient
     return PaymentHttpClient(
         request.app.state.settings.PAGAMENTO_SERVICE_URL,

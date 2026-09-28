@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-import httpx
+import aiohttp
 from fastapi import FastAPI, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
@@ -14,7 +14,24 @@ settings = Settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.settings = settings
-    app.state.http_client = httpx.AsyncClient(timeout=10.0)
+    # Cliente HTTP da estratégia REST. aiohttp em vez de httpx: o httpx tem overhead de CPU
+    # alto sob concorrência, o que mediria a biblioteca e não o protocolo.
+    app.state.http_client = aiohttp.ClientSession(
+        timeout=aiohttp.ClientTimeout(total=settings.REQUEST_TIMEOUT_S)
+    )
+    app.state.grpc_stubs = None
+    app.state.amqp_rpc = None
+
+    if settings.COMMUNICATION_STRATEGY == "grpc":
+        from pedidos.infrastructure.clients.grpc.channels import GrpcStubs
+        app.state.grpc_stubs = GrpcStubs.open(
+            settings.USUARIO_GRPC_TARGET,
+            settings.ESTOQUE_GRPC_TARGET,
+            settings.PAGAMENTO_GRPC_TARGET,
+        )
+    elif settings.COMMUNICATION_STRATEGY == "mensageria":
+        from pedidos.infrastructure.clients.amqp.rpc_client import AmqpRpcClient
+        app.state.amqp_rpc = await AmqpRpcClient.connect(settings.AMQP_URL, settings.REQUEST_TIMEOUT_S)
 
     if settings.USE_IN_MEMORY_DB:
         from pedidos.infrastructure.database.in_memory_repository import InMemoryOrderRepository
@@ -34,7 +51,11 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    await app.state.http_client.aclose()
+    await app.state.http_client.close()
+    if app.state.grpc_stubs is not None:
+        await app.state.grpc_stubs.close()
+    if app.state.amqp_rpc is not None:
+        await app.state.amqp_rpc.close()
     if not settings.USE_IN_MEMORY_DB:
         await app.state.engine.dispose()
 
