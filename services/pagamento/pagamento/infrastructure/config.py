@@ -10,3 +10,5 @@ class Settings(BaseSettings):
     USE_IN_MEMORY_DB: bool = False
     MAX_PAYMENT_AMOUNT: Decimal = Decimal("10000.00")
     DECLINE_RATE: float = 0.05
+    # Semente do sorteio de recusa, para reprodutibilidade dos experimentos.
+    RANDOM_SEED: int | None = None

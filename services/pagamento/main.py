@@ -1,3 +1,4 @@
+import random
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
@@ -13,6 +14,9 @@ settings = Settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.settings = settings
+
+    if settings.RANDOM_SEED is not None:
+        random.seed(settings.RANDOM_SEED)
 
     if settings.USE_IN_MEMORY_DB:
         from pagamento.infrastructure.database.in_memory_repository import InMemoryPaymentRepository

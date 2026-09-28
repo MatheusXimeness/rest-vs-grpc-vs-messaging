@@ -15,8 +15,11 @@ _INITIAL_STOCK: dict[str, Stock] = {
 
 
 class InMemoryStockRepository(IStockRepository):
-    def __init__(self) -> None:
+    def __init__(self, initial_quantity: int | None = None) -> None:
         self._store: dict[str, Stock] = copy.deepcopy(_INITIAL_STOCK)
+        if initial_quantity is not None:
+            for stock in self._store.values():
+                stock.quantity_available = initial_quantity
 
     async def find_by_product_id(self, product_id: str) -> Stock | None:
         return self._store.get(product_id)

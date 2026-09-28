@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
 
     if settings.USE_IN_MEMORY_DB:
         from estoque.infrastructure.database.in_memory_repository import InMemoryStockRepository
-        app.state.stock_repo = InMemoryStockRepository()
+        app.state.stock_repo = InMemoryStockRepository(settings.INITIAL_STOCK_QUANTITY)
         app.state.session_factory = None
     else:
         from estoque.infrastructure.database.connection import Base, create_engine_and_session
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
         app.state.session_factory = session_factory
         app.state.engine = engine
 
-        await _seed_postgres(session_factory)
+        await _seed_postgres(session_factory, settings.INITIAL_STOCK_QUANTITY)
 
     yield
 
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
         await app.state.engine.dispose()
 
 
-async def _seed_postgres(session_factory) -> None:
+async def _seed_postgres(session_factory, initial_quantity: int | None) -> None:
     from sqlalchemy import select
     from estoque.infrastructure.database.models import StockModel
 
@@ -55,6 +55,8 @@ async def _seed_postgres(session_factory) -> None:
             StockModel(product_id="webcam", product_name="Webcam HD", quantity_available=30, quantity_reserved=0),
         ]
         for item in initial:
+            if initial_quantity is not None:
+                item.quantity_available = initial_quantity
             session.add(item)
         await session.commit()
 
