@@ -30,10 +30,27 @@ async def lifespan(app: FastAPI):
         app.state.session_factory = session_factory
         app.state.engine = engine
 
+        await _seed_postgres(session_factory)
+
     yield
 
     if not settings.USE_IN_MEMORY_DB:
         await app.state.engine.dispose()
+
+
+async def _seed_postgres(session_factory) -> None:
+    from sqlalchemy import select
+    from usuario.infrastructure.database.in_memory_repository import _SEED
+    from usuario.infrastructure.database.models import UserModel
+
+    async with session_factory() as session:
+        result = await session.execute(select(UserModel).limit(1))
+        if result.scalar_one_or_none() is not None:
+            return
+
+        for user in _SEED:
+            session.add(UserModel(id=user.id, name=user.name, email=user.email))
+        await session.commit()
 
 
 app = FastAPI(
