@@ -15,8 +15,7 @@ settings = Settings()
 async def lifespan(app: FastAPI):
     app.state.settings = settings
 
-    if settings.RANDOM_SEED is not None:
-        random.seed(settings.RANDOM_SEED)
+    app.state.rng = random.Random(settings.RANDOM_SEED)
 
     if settings.USE_IN_MEMORY_DB:
         from pagamento.infrastructure.database.in_memory_repository import InMemoryPaymentRepository
@@ -34,11 +33,28 @@ async def lifespan(app: FastAPI):
         app.state.session_factory = session_factory
         app.state.engine = engine
 
+    stop_inbound_adapter = await _start_inbound_adapter(app.state, settings)
+
     yield
+
+    if stop_inbound_adapter is not None:
+        await stop_inbound_adapter()
 
     if not settings.USE_IN_MEMORY_DB:
         await app.state.engine.dispose()
 
+
+async def _start_inbound_adapter(state, settings):
+    """Sobe o adaptador de entrada da estratégia configurada e devolve a função de parada."""
+    if settings.COMMUNICATION_STRATEGY == "grpc":
+        from pagamento.infrastructure.grpc.server import start_grpc_server
+        server = await start_grpc_server(state, settings.GRPC_PORT)
+        return lambda: server.stop(grace=1)
+    if settings.COMMUNICATION_STRATEGY == "mensageria":
+        from pagamento.infrastructure.amqp.consumer import start_consumer
+        connection = await start_consumer(state, settings.AMQP_URL, settings.AMQP_PREFETCH)
+        return connection.close
+    return None
 
 app = FastAPI(
     title="Pagamento Service",

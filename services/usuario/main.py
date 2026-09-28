@@ -32,7 +32,12 @@ async def lifespan(app: FastAPI):
 
         await _seed_postgres(session_factory)
 
+    stop_inbound_adapter = await _start_inbound_adapter(app.state, settings)
+
     yield
+
+    if stop_inbound_adapter is not None:
+        await stop_inbound_adapter()
 
     if not settings.USE_IN_MEMORY_DB:
         await app.state.engine.dispose()
@@ -52,6 +57,18 @@ async def _seed_postgres(session_factory) -> None:
             session.add(UserModel(id=user.id, name=user.name, email=user.email))
         await session.commit()
 
+
+async def _start_inbound_adapter(state, settings):
+    """Sobe o adaptador de entrada da estratégia configurada e devolve a função de parada."""
+    if settings.COMMUNICATION_STRATEGY == "grpc":
+        from usuario.infrastructure.grpc.server import start_grpc_server
+        server = await start_grpc_server(state, settings.GRPC_PORT)
+        return lambda: server.stop(grace=1)
+    if settings.COMMUNICATION_STRATEGY == "mensageria":
+        from usuario.infrastructure.amqp.consumer import start_consumer
+        connection = await start_consumer(state, settings.AMQP_URL, settings.AMQP_PREFETCH)
+        return connection.close
+    return None
 
 app = FastAPI(
     title="Usuario Service",

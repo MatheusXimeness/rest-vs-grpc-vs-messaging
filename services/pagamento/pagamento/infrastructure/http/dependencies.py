@@ -33,6 +33,7 @@ def get_process_payment_use_case(
         repo=repo,
         max_amount=request.app.state.settings.MAX_PAYMENT_AMOUNT,
         decline_rate=request.app.state.settings.DECLINE_RATE,
+        rng=request.app.state.rng,
     )
 
 
