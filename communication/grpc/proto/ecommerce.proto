@@ -1,0 +1,71 @@
+// Contrato gRPC entre o serviço de pedidos (cliente) e os serviços de usuário,
+// estoque e pagamento (servidores).
+//
+// As mensagens espelham os payloads JSON da estratégia REST, para que a
+// comparação entre estratégias varie só o transporte e a serialização.
+// Valores monetários trafegam como string decimal ("50.00"), como no REST,
+// para não perder precisão com ponto flutuante.
+//
+// O código Python é gerado no build das imagens (ver Dockerfile de cada serviço).
+
+syntax = "proto3";
+
+package ecommerce;
+
+// ---------- Usuário ----------
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (User);
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+// ---------- Estoque ----------
+
+service StockService {
+  rpc ReserveStock(StockOperation) returns (StockReservation);
+  rpc ReleaseStock(StockOperation) returns (StockReleased);
+}
+
+message StockOperation {
+  string product_id = 1;
+  int32 quantity = 2;
+}
+
+message StockReservation {
+  string product_id = 1;
+  int32 quantity = 2;
+  bool reserved = 3;
+}
+
+message StockReleased {
+  bool released = 1;
+}
+
+// ---------- Pagamento ----------
+
+service PaymentService {
+  rpc ProcessPayment(ProcessPaymentRequest) returns (Payment);
+}
+
+message ProcessPaymentRequest {
+  string order_id = 1;
+  string user_id = 2;
+  string amount = 3;
+}
+
+message Payment {
+  string id = 1;
+  string order_id = 2;
+  bool approved = 3;
+  string transaction_id = 4;  // vazio quando recusado
+  string decline_reason = 5;  // vazio quando aprovado
+}
