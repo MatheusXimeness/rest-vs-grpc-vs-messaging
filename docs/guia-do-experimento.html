@@ -1,0 +1,428 @@
+<title>Guia do Experimento TCC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,650&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: caderno de laboratório — índice fixo à esquerda no desktop, coluna única de leitura (~68ch) à direita. */
+:root {
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --fg: #18202c;
+  --muted: #5a6577;
+  --line: #dde2ea;
+  --accent: #2b55c9;
+  --accent-soft: #e7edfb;
+  --rest: #3f6fb5;
+  --grpc: #3f8f5f;
+  --msg: #b8474f;
+  --warn-bg: #fff6e0;
+  --warn-fg: #7a5200;
+  --code-bg: #eef1f6;
+  --font-display: "Literata", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151c; --surface: #181e27; --fg: #e3e8f0; --muted: #9aa5b6; --line: #2a3340;
+    --accent: #7ea2ff; --accent-soft: #1d2740; --rest: #7ea6e0; --grpc: #6fc491; --msg: #e0808a;
+    --warn-bg: #2e2612; --warn-fg: #f0c96a; --code-bg: #1f2631; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151c; --surface: #181e27; --fg: #e3e8f0; --muted: #9aa5b6; --line: #2a3340;
+  --accent: #7ea2ff; --accent-soft: #1d2740; --rest: #7ea6e0; --grpc: #6fc491; --msg: #e0808a;
+  --warn-bg: #2e2612; --warn-fg: #f0c96a; --code-bg: #1f2631; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 1rem; line-height: 1.65; }
+.wrap { max-width: 76rem; margin: 0 auto; padding-inline: 1.25rem; padding-block: 2rem 5rem;
+  display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 3rem; }
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding-inline: 1rem; } }
+
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 1.5rem); align-self: start; font-size: .875rem; }
+nav.toc p { font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0 0 .6rem; font-weight: 600; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .15rem; counter-reset: s; }
+nav.toc li { counter-increment: s; }
+nav.toc a { display: flex; gap: .55rem; color: var(--muted); text-decoration: none; padding: .25rem .5rem; border-radius: 6px; }
+nav.toc a::before { content: counter(s); font-family: var(--font-mono); font-size: .75rem; min-width: 1.1rem; padding-top: .1rem; }
+nav.toc a:hover, nav.toc a.ativo { color: var(--fg); background: var(--accent-soft); }
+@media (max-width: 900px) {
+  nav.toc { position: static; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; }
+  nav.toc ol { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+}
+
+main { min-width: 0; max-width: 46rem; }
+header.capa { padding-bottom: 1.75rem; border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
+.eyebrow { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0 0 .5rem; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 650; text-wrap: balance; line-height: 1.2; }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); margin: 0 0 .9rem; letter-spacing: -.01em; }
+h2 { font-size: 1.65rem; margin: 3.5rem 0 .75rem; scroll-margin-top: 1.5rem; }
+h2 .n { font-family: var(--font-mono); font-size: .95rem; color: var(--accent); font-weight: 500; margin-right: .6rem; vertical-align: .2em; }
+h3 { font-size: 1.2rem; font-weight: 500; margin: 2rem 0 .5rem; }
+p, li { max-width: 68ch; }
+.lead { font-size: 1.12rem; color: var(--muted); margin: 0; }
+a { color: var(--accent); }
+strong { font-weight: 600; }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--code-bg); padding: .08em .35em; border-radius: 4px; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; gap: .4rem 1.25rem; margin-top: 1.1rem; font-size: .85rem; color: var(--muted); }
+
+.cmd { position: relative; margin: .9rem 0; }
+.cmd pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; padding-right: 5.5rem;
+  overflow-x: auto; font-family: var(--font-mono); font-size: .82rem; line-height: 1.6; }
+.cmd pre .c { color: var(--muted); }
+.cmd button { position: absolute; top: .5rem; right: .5rem; font: 500 .75rem var(--font-body); color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: .3rem .6rem; cursor: pointer; }
+.cmd button:hover { border-color: var(--accent); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.tabela { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: .55rem .8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.aviso { background: var(--warn-bg); color: var(--warn-fg); border-radius: 8px; padding: .85rem 1rem; margin: 1.1rem 0; font-size: .93rem; }
+.aviso strong { color: inherit; }
+.nota { border-left: 3px solid var(--accent); padding: .2rem 0 .2rem 1rem; margin: 1.2rem 0; color: var(--muted); }
+
+.estr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; margin: 1.25rem 0; }
+@media (max-width: 640px) { .estr { grid-template-columns: minmax(0, 1fr); } }
+.estr article { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.05rem; min-width: 0; }
+.estr h3 { margin: 0 0 .3rem; font-size: 1.1rem; display: flex; align-items: center; gap: .5rem; }
+.estr h3::before { content: ""; width: .7rem; height: .7rem; border-radius: 50%; background: var(--c); flex: none; }
+.estr p { font-size: .9rem; margin: .35rem 0; }
+.estr .tag { font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
+.rest { --c: var(--rest); } .grpc { --c: var(--grpc); } .msg { --c: var(--msg); }
+
+figure { margin: 1.5rem 0; }
+figure .tela { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; overflow-x: auto; }
+figcaption { font-size: .84rem; color: var(--muted); margin-top: .5rem; }
+svg text { font-family: var(--font-body); }
+
+ol.passos { list-style: none; padding: 0; margin: 1.25rem 0; counter-reset: p; display: grid; gap: 1.4rem; }
+ol.passos > li { counter-increment: p; display: grid; grid-template-columns: 2.2rem minmax(0, 1fr); gap: .9rem; max-width: none; }
+ol.passos > li::before { content: counter(p); font-family: var(--font-mono); font-weight: 500; width: 2.2rem; height: 2.2rem; border-radius: 50%;
+  display: grid; place-items: center; border: 1.5px solid var(--accent); color: var(--accent); font-size: .9rem; }
+ol.passos h4 { margin: .25rem 0 .3rem; font-size: 1rem; font-weight: 600; }
+ol.passos p { margin: .3rem 0; }
+
+dl.glossario { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: .6rem 1.2rem; margin: 1rem 0; }
+dl.glossario dt { font-weight: 600; }
+dl.glossario dd { margin: 0; color: var(--muted); }
+@media (max-width: 640px) { dl.glossario { grid-template-columns: minmax(0, 1fr); gap: .15rem; } dl.glossario dd { margin-bottom: .7rem; } }
+
+.checklist { list-style: none; padding: 0; display: grid; gap: .45rem; }
+.checklist li { display: flex; gap: .6rem; }
+.checklist .s { font-family: var(--font-mono); font-size: .8rem; padding-top: .15rem; min-width: 4.4rem; }
+.checklist .feito { color: var(--grpc); } .checklist .falta { color: var(--msg); }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Índice">
+    <p>Roteiro</p>
+    <ol>
+      <li><a href="#panorama">O que foi feito</a></li>
+      <li><a href="#conceitos">As três estratégias</a></li>
+      <li><a href="#arquitetura">Onde fica cada peça</a></li>
+      <li><a href="#medicao">Como medimos</a></li>
+      <li><a href="#repeticoes">Por que 10 repetições</a></li>
+      <li><a href="#problemas">Problemas corrigidos</a></li>
+      <li><a href="#validacao">Primeiros números</a></li>
+      <li><a href="#estatistica">A estatística</a></li>
+      <li><a href="#nuvem">Subir a nuvem</a></li>
+      <li><a href="#proximos">Próximos passos</a></li>
+      <li><a href="#glossario">Glossário</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="capa">
+      <p class="eyebrow">TCC · MBA em Engenharia de Software · USP/Esalq</p>
+      <h1>Guia do experimento: REST, gRPC e mensageria</h1>
+      <p class="lead">Explica, do mais simples ao mais detalhado, tudo o que foi implementado para atender ao parecer dos resultados preliminares e como rodar os experimentos no computador local e na nuvem da AWS.</p>
+      <div class="meta"><span>Matheus Ximenes Ferreira</span><span>Orientação: Prof.ª Ariel Da Silva Dias</span><span>Atualizado em 28/09/2026</span></div>
+    </header>
+
+    <h2 id="panorama"><span class="n">1</span>O que foi feito</h2>
+    <p>O parecer da avaliação pediu cinco coisas para a versão final. A tabela mostra onde cada uma está no repositório.</p>
+    <div class="tabela"><table>
+      <thead><tr><th>Pedido do parecer</th><th>O que foi entregue</th><th>Onde</th></tr></thead>
+      <tbody>
+        <tr><td>Testes de carga com k6</td><td>4 cenários (10, 100, 500 req/s e rampa), aquecimento separado, bateria automática</td><td><code>load-tests/k6/</code></td></tr>
+        <tr><td>Implementar gRPC e mensageria</td><td>Adaptadores gRPC e RabbitMQ nos 4 serviços, trocados por uma variável</td><td><code>services/</code>, <code>communication/</code></td></tr>
+        <tr><td>Executar em nuvem</td><td>VM na AWS criada com Terraform e um script que faz o ciclo inteiro</td><td><code>infrastructure/cloud/</code></td></tr>
+        <tr><td>Análise estatística</td><td>Descritiva, IC 95%, testes não paramétricos, tamanho de efeito, boxplots</td><td><code>analysis/estatistica.py</code></td></tr>
+        <tr><td>Tabelas com valores exatos</td><td>CSV e Markdown gerados automaticamente em toda execução</td><td><code>analysis/data/</code>, <code>analysis/resultados/</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>Tudo está versionado em commits separados por assunto. Para ver a lista, rode <code>git log --oneline</code>.</p>
+
+    <h2 id="conceitos"><span class="n">2</span>As três estratégias, em palavras simples</h2>
+    <p>Quando alguém faz um pedido na loja, o serviço de <strong>pedidos</strong> precisa conversar com outros três: <strong>usuário</strong> (o cliente existe?), <strong>estoque</strong> (tem o produto? reserve) e <strong>pagamento</strong> (aprovado?). O TCC compara três formas de fazer essa conversa.</p>
+    <div class="estr">
+      <article class="rest">
+        <h3>REST</h3>
+        <p class="tag">HTTP/1.1 + JSON · síncrono</p>
+        <p>Como pedir algo pelo balcão: você manda um texto legível (JSON) para um endereço (<code>POST /stock/reserve</code>) e espera a resposta.</p>
+        <p>É simples e universal, mas o texto é mais pesado de montar e ler.</p>
+      </article>
+      <article class="grpc">
+        <h3>gRPC</h3>
+        <p class="tag">HTTP/2 + Protobuf · síncrono</p>
+        <p>Como um formulário padronizado: os dois lados combinam antes um contrato (<code>.proto</code>) e trocam dados em binário compacto por uma conexão que fica aberta.</p>
+        <p>Menos bytes e menos trabalho de conversão.</p>
+      </article>
+      <article class="msg">
+        <h3>Mensageria</h3>
+        <p class="tag">AMQP (RabbitMQ) · assíncrono</p>
+        <p>Como deixar um bilhete numa caixa de correio. O pedidos coloca a mensagem numa <em>fila</em> e o serviço a retira quando pode.</p>
+        <p>Há um intermediário (o broker), que absorve picos, mas acrescenta um salto a mais.</p>
+      </article>
+    </div>
+
+    <figure>
+      <div class="tela">
+        <svg viewBox="0 0 680 300" width="100%" role="img" aria-labelledby="fluxo-t">
+          <title id="fluxo-t">Fluxo do experimento: o k6 chama o pedidos por REST; o pedidos chama usuário, estoque e pagamento pela estratégia escolhida</title>
+          <defs><marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+          <rect x="10" y="118" width="110" height="64" rx="8" fill="var(--code-bg)" stroke="var(--line)"/>
+          <text x="65" y="146" text-anchor="middle" font-size="15" font-weight="600" fill="var(--fg)">k6</text>
+          <text x="65" y="166" text-anchor="middle" font-size="12" fill="var(--muted)">gerador de carga</text>
+          <line x1="120" y1="150" x2="218" y2="150" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#seta)"/>
+          <text x="169" y="140" text-anchor="middle" font-size="11" fill="var(--muted)">POST /orders/</text>
+          <text x="169" y="170" text-anchor="middle" font-size="11" fill="var(--muted)">sempre REST</text>
+          <rect x="220" y="110" width="130" height="80" rx="8" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="285" y="146" text-anchor="middle" font-size="15" font-weight="600" fill="var(--fg)">pedidos</text>
+          <text x="285" y="166" text-anchor="middle" font-size="12" fill="var(--muted)">orquestra o fluxo</text>
+          <g font-size="11" fill="var(--muted)">
+            <text x="455" y="36" text-anchor="middle">muda conforme ESTRATEGIA:</text>
+            <text x="455" y="52" text-anchor="middle"><tspan fill="var(--rest)" font-weight="600">rest</tspan> · <tspan fill="var(--grpc)" font-weight="600">grpc</tspan> · <tspan fill="var(--msg)" font-weight="600">mensageria</tspan></text>
+          </g>
+          <line x1="350" y1="135" x2="528" y2="92" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#seta)"/>
+          <line x1="350" y1="150" x2="528" y2="150" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#seta)"/>
+          <line x1="350" y1="165" x2="528" y2="208" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#seta)"/>
+          <g font-size="11" fill="var(--muted)">
+            <text x="430" y="104" text-anchor="middle">1. usuário existe?</text>
+            <text x="440" y="143" text-anchor="middle">2. reservar estoque</text>
+            <text x="430" y="206" text-anchor="middle">3. pagar</text>
+          </g>
+          <rect x="530" y="66" width="140" height="48" rx="8" fill="var(--surface)" stroke="var(--line)"/>
+          <text x="600" y="95" text-anchor="middle" font-size="14" font-weight="600" fill="var(--fg)">usuário</text>
+          <rect x="530" y="126" width="140" height="48" rx="8" fill="var(--surface)" stroke="var(--line)"/>
+          <text x="600" y="155" text-anchor="middle" font-size="14" font-weight="600" fill="var(--fg)">estoque</text>
+          <rect x="530" y="186" width="140" height="48" rx="8" fill="var(--surface)" stroke="var(--line)"/>
+          <text x="600" y="215" text-anchor="middle" font-size="14" font-weight="600" fill="var(--fg)">pagamento</text>
+          <text x="600" y="268" text-anchor="middle" font-size="11" fill="var(--muted)">cada serviço tem seu Postgres</text>
+        </svg>
+      </div>
+      <figcaption>A porta de entrada é igual em todos os experimentos: o k6 sempre chama o pedidos por REST. Só a conversa interna muda, e é ela que está sendo comparada.</figcaption>
+    </figure>
+
+    <div class="nota">Na mensageria, a reserva de estoque e o pagamento precisam de resposta, porque o pedido depende delas. Por isso usamos <strong>RPC sobre fila</strong>: a mensagem vai com um endereço de resposta (<code>reply_to</code>) e um número de protocolo (<code>correlation_id</code>). Já a liberação de estoque, quando o pagamento é recusado, é um evento sem resposta: o pedido não espera.</div>
+
+    <h2 id="arquitetura"><span class="n">3</span>Onde fica cada peça</h2>
+    <p>Os serviços seguem a <strong>arquitetura hexagonal</strong>. No centro ficam as regras de negócio (domínio e casos de uso), que não sabem se a conversa é REST, gRPC ou fila. Em volta ficam os <strong>adaptadores</strong>, que fazem a tradução para cada protocolo. Por isso trocar a estratégia não mexe em nenhuma regra de negócio. Esse é o princípio de design do seu projeto.</p>
+    <div class="tabela"><table>
+      <thead><tr><th>Peça</th><th>Arquivo</th><th>Papel</th></tr></thead>
+      <tbody>
+        <tr><td>Contrato gRPC</td><td><code>communication/grpc/proto/ecommerce.proto</code></td><td>Define mensagens e métodos. O código Python é gerado no build da imagem.</td></tr>
+        <tr><td>Contrato das filas</td><td><code>communication/messaging/rabbitmq/README.md</code></td><td>Nome de cada fila, payload e resposta</td></tr>
+        <tr><td>Portas de saída</td><td><code>pedidos/application/ports/outbound.py</code></td><td>Interfaces que o caso de uso enxerga (<code>IUserServicePort</code>…)</td></tr>
+        <tr><td>Clientes (pedidos)</td><td><code>pedidos/infrastructure/clients/http|grpc|amqp/</code></td><td>Um adaptador por estratégia para cada porta</td></tr>
+        <tr><td>Escolha do adaptador</td><td><code>pedidos/infrastructure/http/dependencies.py</code></td><td>Lê <code>COMMUNICATION_STRATEGY</code> e injeta o cliente certo</td></tr>
+        <tr><td>Servidores gRPC</td><td><code>&lt;serviço&gt;/infrastructure/grpc/server.py</code></td><td>Recebem a chamada e executam o mesmo caso de uso do REST</td></tr>
+        <tr><td>Consumidores AMQP</td><td><code>&lt;serviço&gt;/infrastructure/amqp/consumer.py</code></td><td>Retiram mensagens da fila e respondem</td></tr>
+        <tr><td>Broker</td><td><code>infrastructure/docker/docker-compose.yml</code> (serviço <code>rabbitmq</code>)</td><td>Só sobe na estratégia de mensageria (perfil <code>mensageria</code>)</td></tr>
+      </tbody>
+    </table></div>
+    <p>Para subir o sistema em uma estratégia e testar à mão:</p>
+    <div class="cmd"><pre>ESTRATEGIA=grpc docker compose -f infrastructure/docker/docker-compose.yml up --build
+ESTRATEGIA=mensageria docker compose -f infrastructure/docker/docker-compose.yml --profile mensageria up --build</pre><button type="button">Copiar</button></div>
+
+    <h2 id="medicao"><span class="n">4</span>Como medimos</h2>
+    <p>Cada <strong>execução</strong> é uma medição completa e independente. Ela segue esta sequência:</p>
+    <ol class="passos">
+      <li><div><h4>Ambiente zerado</h4><p>Todos os contêineres e bancos são destruídos e recriados (<code>down -v</code> + <code>up</code>). Assim, uma execução não herda cache nem dados da anterior.</p></div></li>
+      <li><div><h4>Aquecimento de 30 s</h4><p>O k6 já envia pedidos, mas nada é contado. Serve para as conexões abrirem e o Python "esquentar".</p></div></li>
+      <li><div><h4>Medição de 60 s</h4><p>Três instrumentos medem a mesma janela: o <strong>k6</strong> (latência vista pelo cliente, throughput e erros), o <strong>coletor Prometheus</strong> (latência dentro de cada serviço) e o <strong>docker stats</strong> (CPU e memória de cada contêiner, incluindo bancos e o RabbitMQ).</p></div></li>
+      <li><div><h4>Exportação automática</h4><p>Os números vão para CSV e tabela Markdown na pasta da execução e são consolidados em <code>analysis/data/</code>. Nada é lido "no olho" em gráfico.</p></div></li>
+    </ol>
+    <div class="tabela"><table>
+      <thead><tr><th>Cenário</th><th class="num">Carga</th><th>O que revela</th></tr></thead>
+      <tbody>
+        <tr><td>baixa</td><td class="num">10 req/s</td><td>Custo básico de cada protocolo, sem fila de espera</td></tr>
+        <tr><td>moderada</td><td class="num">100 req/s</td><td>Perto do limite de 1 CPU por serviço: quem aguenta e quem começa a enfileirar</td></tr>
+        <tr><td>alta</td><td class="num">500 req/s</td><td>Sobrecarga: como cada estratégia se degrada. Mede a robustez a picos.</td></tr>
+        <tr><td>rampup</td><td class="num">10 → 500 req/s</td><td>Crescimento gradual até a saturação</td></tr>
+      </tbody>
+    </table></div>
+    <p>A carga é de <strong>taxa de chegada constante</strong>: o k6 dispara 100 pedidos por segundo mesmo que o sistema esteja lento. Assim o sistema não "se protege" ao desacelerar o cliente, como acontece em testes com um número fixo de usuários.</p>
+    <p><strong>Variáveis de controle</strong>, iguais em todas as execuções: 1 CPU e 512 MB por serviço, 0,5 CPU e 256 MB por banco, 1 CPU e 512 MB para o broker, mesmo payload (<code>user-1</code> compra 1 mouse de R$ 50,00), mesma semente aleatória para recusas de pagamento (5%) e timeout de 10 s nas três estratégias.</p>
+    <p>A bateria <strong>intercala</strong> as estratégias: na rodada 1 a ordem é REST → gRPC → mensageria, na rodada 2 é gRPC → mensageria → REST, e assim por diante. Se o computador ficar mais lento às 3 h da manhã, o efeito se espalha pelas três, em vez de prejudicar só a última.</p>
+    <div class="cmd"><pre><span class="c"># bateria completa: 3 estratégias × 4 cenários × 10 repetições (~4,5 h)</span>
+load-tests/k6/bateria.sh -a local
+
+<span class="c"># se for interrompida, retome a partir da rodada 6</span>
+load-tests/k6/bateria.sh -a local -p 6</pre><button type="button">Copiar</button></div>
+
+    <h2 id="repeticoes"><span class="n">5</span>Por que 10 repetições bastam</h2>
+    <p>O projeto de pesquisa falava em 100 repetições. Veja o que isso custaria:</p>
+    <div class="tabela"><table>
+      <thead><tr><th>Repetições por cenário</th><th class="num">Execuções por ambiente</th><th class="num">Tempo por ambiente</th><th class="num">Custo AWS (c6i.4xlarge)</th></tr></thead>
+      <tbody>
+        <tr><td>10</td><td class="num">120</td><td class="num">~4,5 h</td><td class="num">~US$ 4</td></tr>
+        <tr><td>30</td><td class="num">360</td><td class="num">~13 h</td><td class="num">~US$ 10</td></tr>
+        <tr><td>100</td><td class="num">1.200</td><td class="num">~44 h</td><td class="num">~US$ 32</td></tr>
+      </tbody>
+    </table></div>
+    <p>Argumentos para defender 10 diante da banca:</p>
+    <ul>
+      <li><strong>Cada repetição já é uma média grande.</strong> Uma execução do cenário moderado mede 6.000 requisições. As 10 repetições servem para estimar a variação <em>entre execuções</em>, não para medir a latência em si.</li>
+      <li><strong>Poder estatístico suficiente para diferenças grandes.</strong> Com 10 × 10 observações, o teste de Mann-Whitney detecta diferenças em que um grupo supera o outro na maioria das comparações, e o menor p-valor possível é cerca de 0,00001. As diferenças entre protocolos observadas até aqui são de 2× a 50×.</li>
+      <li><strong>O tamanho de efeito é reportado.</strong> O delta de Cliff mostra se a diferença é relevante, não só se ela existe.</li>
+      <li><strong>Limitação assumida.</strong> 100 repetições custariam ~88 h de máquina nos dois ambientes, incompatível com o prazo. Registre isso como limitação no capítulo de metodologia.</li>
+    </ul>
+
+    <h2 id="problemas"><span class="n">6</span>Problemas que os testes revelaram</h2>
+    <p>Cada um destes problemas teria distorcido os resultados sem ninguém perceber. Vale citá-los no TCC, porque mostram rigor metodológico.</p>
+    <div class="tabela"><table>
+      <thead><tr><th>Problema</th><th>Efeito</th><th>Correção</th></tr></thead>
+      <tbody>
+        <tr><td>Cliente REST com <code>httpx</code></td><td>Gastava ~2× mais CPU por chamada. O REST saturava em 60 req/s por culpa da biblioteca, não do protocolo.</td><td>Troca por <code>aiohttp</code>: 97 req/s com a mesma CPU</td></tr>
+        <tr><td>Pagamento fora do ar virava "recusado" (402)</td><td>Falha técnica seria contada como decisão de negócio</td><td>Novo erro <code>DependencyUnavailableError</code> → 503</td></tr>
+        <tr><td>Semente aleatória compartilhada</td><td>A biblioteca do RabbitMQ também sorteava números, então a mensageria tinha outra sequência de recusas</td><td>Gerador aleatório próprio do pagamento</td></tr>
+        <tr><td>Usuários não existiam no Postgres</td><td>100% de erro no fluxo com banco real</td><td>Carga inicial (seed) de usuários</td></tr>
+        <tr><td>Estoque acabava em 10 s</td><td>Erros de estoque no meio do teste</td><td>Estoque inicial de 10 milhões nos testes</td></tr>
+        <tr><td>Relógio do Windows 76 s atrasado</td><td>O relógio da WSL salta a cada ~30 s e algumas requisições aparecem com 76 s de duração</td><td>Amostras acima de 2× o timeout são excluídas e contadas em <code>amostras_suspeitas</code></td></tr>
+      </tbody>
+    </table></div>
+    <div class="aviso"><strong>Pendente no seu computador:</strong> o relógio do Windows não sincroniza (fonte "Local CMOS Clock"). Para corrigir de vez, abra o PowerShell <strong>como administrador</strong> e rode o comando abaixo. A nuvem usa NTP (chrony) e não tem esse problema.</div>
+    <div class="cmd"><pre>net start w32time
+w32tm /config /manualpeerlist:"time.windows.com,0x9 a.st1.ntp.br,0x9" /syncfromflags:manual /update
+w32tm /resync /force</pre><button type="button">Copiar</button></div>
+
+    <h2 id="validacao"><span class="n">7</span>Primeiros números (testes de validação)</h2>
+    <p>Estes números vêm de <strong>uma única execução curta</strong> por estratégia (30 s), feita só para confirmar que tudo funciona. <strong>Não use no TCC</strong>: os resultados oficiais saem da bateria, em <code>analysis/resultados/relatorio.md</code>. Eles já dão uma ideia do que esperar.</p>
+    <div class="tabela"><table>
+      <thead><tr><th>Cenário moderado (100 req/s), Postgres</th><th class="num">Throughput</th><th class="num">Latência mediana</th><th class="num">CPU do pedidos</th></tr></thead>
+      <tbody>
+        <tr><td>gRPC</td><td class="num">100 req/s</td><td class="num">24 ms</td><td class="num">67%</td></tr>
+        <tr><td>REST (aiohttp)</td><td class="num">97 req/s</td><td class="num">1.178 ms</td><td class="num">89%</td></tr>
+        <tr><td>Mensageria</td><td class="num">90 req/s</td><td class="num">1.830 ms</td><td class="num">85%</td></tr>
+      </tbody>
+    </table></div>
+    <p>Leitura inicial: o gRPC ficou bem abaixo do limite de CPU, enquanto REST e mensageria já estavam enfileirando. Isso vai na direção da hipótese "gRPC → menor latência". A mensageria gastou ainda ~40% de uma CPU no próprio RabbitMQ, um custo que o <code>docker stats</code> agora captura. Em 500 req/s as três saturaram, mas o gRPC ainda completou ~84% dos pedidos, enquanto REST (ainda com httpx nesse teste) e mensageria ficaram perto de 100% de timeouts.</p>
+
+    <h2 id="estatistica"><span class="n">8</span>A estatística, sem mistério</h2>
+    <p>Rode depois da bateria:</p>
+    <div class="cmd"><pre>analysis/analisar.sh</pre><button type="button">Copiar</button></div>
+    <p>O script gera <code>analysis/resultados/relatorio.md</code>, com tabelas prontas (vírgula decimal) e boxplots. O que cada teste responde:</p>
+    <div class="tabela"><table>
+      <thead><tr><th>Ferramenta</th><th>Pergunta que responde</th></tr></thead>
+      <tbody>
+        <tr><td>Média ± desvio padrão, mediana</td><td>Qual o valor típico e quanto ele varia entre execuções?</td></tr>
+        <tr><td>Coeficiente de variação (CV)</td><td>A variação é grande em relação ao valor? (DP ÷ média)</td></tr>
+        <tr><td>IC 95%</td><td>Em que faixa a média verdadeira provavelmente está?</td></tr>
+        <tr><td>Kruskal-Wallis</td><td>Pelo menos uma das 3 estratégias é diferente das outras?</td></tr>
+        <tr><td>Mann-Whitney + Holm</td><td>Qual par é diferente? (Holm corrige o risco de "achar" diferença só por fazer 3 comparações)</td></tr>
+        <tr><td>Delta de Cliff</td><td>A diferença é grande? −1 a 1; acima de 0,474 é efeito grande</td></tr>
+        <tr><td>Brown-Forsythe</td><td>A nuvem varia mais que o local? (testa a hipótese de variabilidade)</td></tr>
+      </tbody>
+    </table></div>
+    <p>Os testes são <strong>não paramétricos</strong> porque, com 10 repetições, não dá para garantir que os dados sigam a curva normal, e latência costuma ter "cauda longa". Esses testes comparam posições (postos) em vez de médias, então funcionam bem nessa situação.</p>
+    <p class="nota">Exemplo de como escrever: "No cenário moderado local, a latência mediana do gRPC (24 ms) foi menor que a do REST (1.178 ms), com diferença significativa (Mann-Whitney, p &lt; 0,001 após correção de Holm) e efeito grande (δ de Cliff = −1,00)."</p>
+
+    <h2 id="nuvem"><span class="n">9</span>Subir o ambiente na nuvem, passo a passo</h2>
+    <p>A ideia é simples: alugar por algumas horas um computador na AWS com a mesma configuração, rodar a mesma bateria nele e devolver o computador. O Terraform descreve esse computador em arquivos de texto (<code>infrastructure/cloud/terraform/</code>), e o script <code>nuvem.sh</code> faz o resto.</p>
+    <ol class="passos">
+      <li><div><h4>Criar a conta AWS e um alerta de gasto</h4>
+        <p>Crie a conta em <a href="https://aws.amazon.com/" target="_blank" rel="noopener">aws.amazon.com</a> (pede cartão). Depois, em <strong>Billing → Budgets</strong>, crie um orçamento de US$ 10 com alerta por e-mail. Assim nenhuma VM esquecida vira surpresa na fatura.</p></div></li>
+      <li><div><h4>Criar um usuário de acesso (IAM)</h4>
+        <p>No console, vá em <strong>IAM → Users → Create user</strong> e dê a política <code>AmazonEC2FullAccess</code>. Em <strong>Security credentials → Create access key</strong> (tipo "CLI"), anote o <em>Access key ID</em> e a <em>Secret access key</em>. A secret só aparece uma vez.</p></div></li>
+      <li><div><h4>Instalar a AWS CLI e o Terraform na WSL</h4>
+        <div class="cmd"><pre>sudo apt update &amp;&amp; sudo apt install -y unzip
+curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/aws.zip
+unzip -q /tmp/aws.zip -d /tmp &amp;&amp; sudo /tmp/aws/install
+curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/tf.zip
+sudo unzip -o /tmp/tf.zip -d /usr/local/bin terraform
+aws --version &amp;&amp; terraform -version</pre><button type="button">Copiar</button></div></div></li>
+      <li><div><h4>Conectar a CLI à sua conta</h4>
+        <div class="cmd"><pre>aws configure
+<span class="c"># Access key ID / Secret: as do passo 2 · region: us-east-1 · output: json</span>
+aws sts get-caller-identity   <span class="c"># deve mostrar o número da sua conta</span></pre><button type="button">Copiar</button></div>
+        <p>A chave SSH (<code>~/.ssh/id_ed25519</code>) já existe na sua máquina e será usada para entrar na VM.</p></div></li>
+      <li><div><h4>Criar a VM</h4>
+        <div class="cmd"><pre>infrastructure/cloud/nuvem.sh criar</pre><button type="button">Copiar</button></div>
+        <p>Cria uma <strong>c6i.4xlarge</strong> (16 vCPUs, 32 GB, Ubuntu 24.04) com SSH liberado só para o seu IP e instala o Docker. A cobrança começa aqui: ~US$ 0,68 por hora. Leva ~4 min.</p></div></li>
+      <li><div><h4>Enviar o código e validar</h4>
+        <div class="cmd"><pre>infrastructure/cloud/nuvem.sh enviar
+infrastructure/cloud/nuvem.sh teste    <span class="c"># ~5 min: 1 execução curta de cada estratégia</span></pre><button type="button">Copiar</button></div></div></li>
+      <li><div><h4>Rodar a bateria</h4>
+        <div class="cmd"><pre>infrastructure/cloud/nuvem.sh bateria  <span class="c"># ~4,5 h, roda sozinha na VM</span>
+infrastructure/cloud/nuvem.sh status   <span class="c"># acompanhe quando quiser</span></pre><button type="button">Copiar</button></div>
+        <p>Pode fechar o terminal ou desligar o computador: a bateria continua na VM.</p></div></li>
+      <li><div><h4>Baixar os resultados e destruir tudo</h4>
+        <div class="cmd"><pre>infrastructure/cloud/nuvem.sh baixar
+infrastructure/cloud/nuvem.sh destruir <span class="c"># encerra a cobrança</span>
+analysis/analisar.sh                   <span class="c"># análise com local + nuvem</span></pre><button type="button">Copiar</button></div>
+        <p>Confira no console da AWS (<strong>EC2 → Instances</strong>) que não ficou nenhuma instância ligada. Custo total esperado: ~US$ 4 a 5.</p></div></li>
+    </ol>
+    <div class="nota">Por que o k6 roda na mesma VM, e não em outra máquina? Porque no ambiente local ele também roda no mesmo host. Mantendo a mesma topologia, a diferença entre os ambientes fica só na infraestrutura (virtualização, hardware e vizinhos da nuvem), que é o que o TCC quer observar.</div>
+
+    <h2 id="proximos"><span class="n">10</span>Próximos passos</h2>
+    <ul class="checklist">
+      <li><span class="s feito">feito</span><span>gRPC e mensageria implementados, testados nos 3 fluxos (sucesso, usuário inexistente, produto inexistente)</span></li>
+      <li><span class="s feito">feito</span><span>k6, bateria intercalada, exportação automática, análise estatística, Terraform</span></li>
+      <li><span class="s feito">rodando</span><span>Bateria local: 120 execuções, log em <code>metricas/bateria_local.log</code></span></li>
+      <li><span class="s falta">você</span><span>Corrigir o relógio do Windows (seção 6), de preferência antes de uma nova bateria local</span></li>
+      <li><span class="s falta">você</span><span>Criar a conta AWS e as credenciais (passos 1 a 4 da seção 9)</span></li>
+      <li><span class="s falta">depois</span><span>Bateria na nuvem, <code>analisar.sh</code> e levar as tabelas de <code>relatorio.md</code> para o texto</span></li>
+      <li><span class="s falta">texto</span><span>Na metodologia: citar a entrada sempre REST, o RPC sobre fila, as 10 repetições (seção 5) e as correções (seção 6) como ameaças à validade tratadas</span></li>
+    </ul>
+
+    <h2 id="glossario"><span class="n">11</span>Glossário</h2>
+    <dl class="glossario">
+      <dt>Latência p95</dt><dd>95% das requisições foram mais rápidas que esse valor. Mostra a experiência dos "piores casos comuns".</dd>
+      <dt>Throughput</dt><dd>Requisições concluídas por segundo.</dd>
+      <dt>Saturação</dt><dd>Quando o serviço não dá conta da carga: as requisições formam fila e a latência explode.</dd>
+      <dt>Broker</dt><dd>O intermediário que guarda e entrega mensagens (aqui, o RabbitMQ).</dd>
+      <dt>Protobuf</dt><dd>Formato binário do gRPC, descrito no arquivo <code>.proto</code>.</dd>
+      <dt>Adaptador</dt><dd>Código que traduz entre o mundo externo (HTTP, gRPC, fila) e o caso de uso.</dd>
+      <dt>Terraform</dt><dd>Ferramenta que cria infraestrutura de nuvem a partir de arquivos de texto (infraestrutura como código).</dd>
+      <dt>Aquecimento</dt><dd>Período inicial descartado, até o sistema estabilizar.</dd>
+      <dt>Amostra suspeita</dt><dd>Requisição com duração impossível (acima de 20 s), causada por salto de relógio. É excluída e contada.</dd>
+      <dt>Semente (seed)</dt><dd>Número que fixa a sequência de sorteios, para o experimento ser reproduzível.</dd>
+    </dl>
+  </main>
+</div>
+
+<script>
+document.querySelectorAll('.cmd button').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var pre = btn.previousElementSibling;
+    var texto = pre.innerText;
+    var ok = function () { btn.textContent = 'Copiado'; setTimeout(function () { btn.textContent = 'Copiar'; }, 1500); };
+    var selecionar = function () {
+      var r = document.createRange(); r.selectNodeContents(pre);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      btn.textContent = 'Selecionado';
+    };
+    try { navigator.clipboard.writeText(texto).then(ok, selecionar); } catch (e) { selecionar(); }
+  });
+});
+var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+if ('IntersectionObserver' in window) {
+  var obs = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (e) {
+      if (e.isIntersecting) {
+        links.forEach(function (a) { a.classList.toggle('ativo', a.getAttribute('href') === '#' + e.target.id); });
+      }
+    });
+  }, { rootMargin: '0px 0px -70% 0px' });
+  document.querySelectorAll('main h2[id]').forEach(function (h) { obs.observe(h); });
+}
+</script>
