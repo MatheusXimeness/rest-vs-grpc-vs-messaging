@@ -16,7 +16,10 @@ REQUEST_DURATION = Histogram(
     "http_request_duration_seconds",
     "HTTP request duration in seconds",
     ["method", "endpoint"],
-    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
+    # Buckets mais finos entre 1 ms e 100 ms, onde fica a latência típica do fluxo,
+    # para reduzir o erro da estimativa de p95 por interpolação.
+    buckets=[0.001, 0.0025, 0.005, 0.0075, 0.01, 0.0125, 0.015, 0.02, 0.025, 0.035, 0.05,
+             0.075, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0],
 )
 
 _EXCLUDED_PATHS = {"/metrics", "/health"}
