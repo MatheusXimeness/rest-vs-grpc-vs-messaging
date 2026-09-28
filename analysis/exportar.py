@@ -12,6 +12,7 @@ executado isoladamente para reprocessar coletas antigas e reconsolidar:
 import argparse
 import csv
 import json
+import re
 import statistics
 from pathlib import Path
 
@@ -35,9 +36,19 @@ METRICAS_K6 = [
     "latencia_media_ms", "latencia_mediana_ms", "latencia_p90_ms", "latencia_p95_ms",
     "latencia_p99_ms", "latencia_min_ms", "latencia_max_ms",
     "taxa_erro_pct", "taxa_recusa_pct", "taxa_erro_tecnico_pct", "iteracoes_descartadas",
-    "amostras_suspeitas",
+    "amostras_suspeitas", "latencia_media_bruta_ms",
 ]
-COLUNAS_K6 = COLUNAS_META + ["taxa_alvo_rps", "aquecimento_s", "medicao_s"] + METRICAS_K6
+# Consumo de recursos somado dos contêineres da aplicação (serviços, bancos e broker),
+# calculado a partir do docker_stats.csv amostrado pelo executor durante a medição.
+METRICAS_RECURSOS_TOTAIS = ["cpu_total_pct", "memoria_total_mb"]
+COLUNAS_K6 = (COLUNAS_META + ["taxa_alvo_rps", "aquecimento_s", "medicao_s"] + METRICAS_K6
+              + METRICAS_RECURSOS_TOTAIS)
+
+COLUNAS_RECURSOS = COLUNAS_META + [
+    "container", "amostras", "cpu_media_pct", "cpu_max_pct", "memoria_media_mb", "memoria_max_mb",
+]
+# Gerador de carga e coletor não fazem parte do sistema medido.
+CONTAINERS_FORA_DO_TOTAL = {"k6", "collector"}
 
 # Métricas resumidas entre repetições (média, desvio padrão, mediana) em resumo_k6.*
 METRICAS_RESUMO = [
@@ -46,6 +57,8 @@ METRICAS_RESUMO = [
     ("latencia_p95_ms", "Lat. p95 (ms)", 3),
     ("taxa_erro_tecnico_pct", "Erro técnico (%)", 2),
     ("taxa_recusa_pct", "Recusa pagamento (%)", 2),
+    ("cpu_total_pct", "CPU total (%)", 1),
+    ("memoria_total_mb", "Memória total (MB)", 1),
     ("iteracoes_descartadas", "Iterações descartadas", 1),
     ("amostras_suspeitas", "Amostras suspeitas", 1),
 ]
@@ -188,6 +201,47 @@ def _coletas(metricas_dir: Path) -> list[Path]:
     return sorted(p for p in metricas_dir.iterdir() if (p / "dados_brutos.json").exists())
 
 
+def _nome_servico(container: str) -> str:
+    """docker-db_usuario-1 → db_usuario; docker-k6-run-3f2a1b → k6."""
+    if "-k6-run-" in container:
+        return "k6"
+    m = re.match(r"^[^-]+-(.+)-\d+$", container)
+    return m.group(1) if m else container
+
+
+def exportar_recursos(pasta: Path) -> list[dict]:
+    """Resume docker_stats.csv (amostras de CPU/memória por contêiner) em recursos.csv."""
+    arquivo = pasta / "docker_stats.csv"
+    if not arquivo.exists():
+        return []
+    amostras: dict[str, list[tuple[float, float]]] = {}
+    with open(arquivo, encoding="utf-8") as f:
+        for linha in csv.DictReader(f):
+            try:
+                cpu, mem = float(linha["cpu_pct"]), float(linha["mem_mb"])
+            except (TypeError, ValueError):
+                continue
+            amostras.setdefault(_nome_servico(linha["container"]), []).append((cpu, mem))
+
+    meta = _meta_da_pasta(pasta)
+    base = {k: meta.get(k, "") for k in COLUNAS_META}
+    linhas = []
+    for container in sorted(amostras):
+        cpus = [c for c, _ in amostras[container]]
+        mems = [m for _, m in amostras[container]]
+        linhas.append({
+            **base,
+            "container": container,
+            "amostras": len(cpus),
+            "cpu_media_pct": round(statistics.mean(cpus), 3),
+            "cpu_max_pct": round(max(cpus), 3),
+            "memoria_media_mb": round(statistics.mean(mems), 2),
+            "memoria_max_mb": round(max(mems), 2),
+        })
+    _write_csv(pasta / "recursos.csv", COLUNAS_RECURSOS, linhas)
+    return linhas
+
+
 def exportar_k6(pasta: Path) -> bool:
     """Converte k6_resumo.json da pasta em k6.csv. Retorna False se não houver resumo."""
     arquivo = pasta / "k6_resumo.json"
@@ -196,6 +250,10 @@ def exportar_k6(pasta: Path) -> bool:
     resumo = json.loads(arquivo.read_text(encoding="utf-8"))
     meta = _meta_da_pasta(pasta)
     linha = {**{k: meta.get(k, "") for k in COLUNAS_META}, **resumo}
+    recursos = [r for r in exportar_recursos(pasta) if r["container"] not in CONTAINERS_FORA_DO_TOTAL]
+    if recursos:
+        linha["cpu_total_pct"] = round(sum(r["cpu_media_pct"] for r in recursos), 3)
+        linha["memoria_total_mb"] = round(sum(r["memoria_media_mb"] for r in recursos), 2)
     linha["cenario"] = resumo.get("cenario") or meta.get("cenario", "")
     _write_csv(pasta / "k6.csv", COLUNAS_K6, [{c: linha.get(c, "") for c in COLUNAS_K6}])
     return True
@@ -207,7 +265,7 @@ def reprocessar(metricas_dir: Path):
         report = json.loads((pasta / "dados_brutos.json").read_text(encoding="utf-8"))
         exportar_coleta(report, _meta_da_pasta(pasta), pasta)
         if exportar_k6(pasta):
-            print("  → k6.csv")
+            print("  → k6.csv, recursos.csv")
 
 
 def resumir_k6(linhas: list[dict], destino: Path):
@@ -247,8 +305,9 @@ def resumir_k6(linhas: list[dict], destino: Path):
         linhas_csv.append(linha)
         md.append(f"| {' | '.join(chave)} | {len(grupo)} | " + " | ".join(celulas) + " |")
 
-    md += ["", "Valores: média ± desvio padrão entre as repetições. Medições do lado do cliente (k6), "
-               "excluindo o período de aquecimento.", ""]
+    md += ["", "Valores: média ± desvio padrão entre as repetições. Latência, throughput e erros "
+               "medidos pelo cliente (k6), excluindo o aquecimento; CPU e memória somam os contêineres "
+               "da aplicação (serviços, bancos e broker) na mesma janela, com CPU em % de um núcleo.", ""]
     _write_csv(destino / "resumo_k6.csv", colunas, linhas_csv)
     (destino / "resumo_k6.md").write_text("\n".join(md), encoding="utf-8")
     print(f"Resumo entre repetições: {destino / 'resumo_k6.md'} ({len(chaves)} grupos)")
@@ -257,7 +316,7 @@ def resumir_k6(linhas: list[dict], destino: Path):
 def consolidar(metricas_dir: Path, destino: Path):
     destino.mkdir(parents=True, exist_ok=True)
     for nome, colunas in (("endpoints", COLUNAS_ENDPOINTS), ("servicos", COLUNAS_SERVICOS),
-                          ("k6", COLUNAS_K6)):
+                          ("k6", COLUNAS_K6), ("recursos", COLUNAS_RECURSOS)):
         linhas = []
         for pasta in _coletas(metricas_dir):
             arquivo = pasta / f"{nome}.csv"

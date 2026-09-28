@@ -13,7 +13,7 @@
 
 import http from 'k6/http';
 import { check } from 'k6';
-import { Counter, Rate } from 'k6/metrics';
+import { Counter, Rate, Trend } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
 const CENARIO = __ENV.CENARIO || 'baixa';
@@ -42,9 +42,14 @@ const PARAMS = { headers: { 'Content-Type': 'application/json' }, timeout: `${TI
 const recusas = new Rate('pedidos_recusados');
 const errosTecnicos = new Rate('erros_tecnicos');
 
-// Durações acima do timeout são fisicamente impossíveis: indicam salto no relógio do host
-// (observado no WSL2). A execução afetada deve ser descartada ou ter a média desconsiderada.
+// Uma requisição que estoura o timeout termina logo depois dele (~10 s). Durações acima de
+// 2× o timeout são fisicamente impossíveis: indicam salto no relógio do host (observado no
+// WSL2, ~76 s). Essas amostras são contadas e excluídas das estatísticas de latência.
+const LIMITE_SUSPEITA_MS = 2 * TIMEOUT_MS;
 const amostrasSuspeitas = new Counter('amostras_suspeitas');
+// Latência só das amostras válidas (≤ 2× timeout, o que inclui os timeouts reais). É a base das estatísticas de latência do
+// resumo; a média bruta, que inclui as suspeitas, fica em latencia_media_bruta_ms.
+const latenciaValida = new Trend('latencia_valida', true);
 
 function dimensionarVUs(taxaMax) {
   // VUs necessários ≈ taxa × latência. Com o teto em 2× a taxa, o k6 sustenta até ~2 s de
@@ -100,6 +105,7 @@ export const options = {
     [`erros_tecnicos${SO_MEDICAO}`]: ['rate>=0'],
     [`dropped_iterations${SO_MEDICAO}`]: ['count>=0'],
     [`amostras_suspeitas${SO_MEDICAO}`]: ['count>=0'],
+    [`latencia_valida${SO_MEDICAO}`]: ['max>=0'],
   },
 };
 
@@ -107,7 +113,8 @@ export default function () {
   const res = http.post(`${BASE_URL}/orders/`, PAYLOAD, PARAMS);
   recusas.add(res.status === 402);
   errosTecnicos.add(res.status !== 201 && res.status !== 402);
-  if (res.timings.duration > TIMEOUT_MS) amostrasSuspeitas.add(1);
+  if (res.timings.duration > LIMITE_SUSPEITA_MS) amostrasSuspeitas.add(1);
+  else latenciaValida.add(res.timings.duration);
   check(res, { 'pedido criado ou recusado': (r) => r.status === 201 || r.status === 402 });
 }
 
@@ -121,7 +128,8 @@ function arredondar(v, casas = 3) {
 }
 
 export function handleSummary(data) {
-  const dur = valores(data, 'http_req_duration');
+  const dur = valores(data, 'latencia_valida');
+  const bruta = valores(data, 'http_req_duration');
   const requisicoes = valores(data, 'http_reqs').count || 0;
 
   const resumo = {
@@ -138,6 +146,7 @@ export function handleSummary(data) {
     latencia_p99_ms: arredondar(dur['p(99)']),
     latencia_min_ms: arredondar(dur.min),
     latencia_max_ms: arredondar(dur.max),
+    latencia_media_bruta_ms: arredondar(bruta.avg),
     taxa_erro_pct: arredondar((valores(data, 'http_req_failed').rate || 0) * 100, 4),
     taxa_recusa_pct: arredondar((valores(data, 'pedidos_recusados').rate || 0) * 100, 4),
     taxa_erro_tecnico_pct: arredondar((valores(data, 'erros_tecnicos').rate || 0) * 100, 4),

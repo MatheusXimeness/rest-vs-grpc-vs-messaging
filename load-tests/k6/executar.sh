@@ -17,7 +17,8 @@
 # Exemplo: load-tests/k6/executar.sh -c "baixa moderada" -r 5
 #
 # Resultados: metricas/<estrategia>_<ambiente>_<cenario>_rNN_<timestamp>/ com k6_resumo.json,
-# CSVs e tabela do coletor, e o consolidado em analysis/data/.
+# CSVs e tabela do coletor, docker_stats.csv (CPU/memória por contêiner) e o consolidado
+# em analysis/data/.
 
 set -euo pipefail
 
@@ -44,6 +45,11 @@ while getopts "e:a:m:c:r:w:d:h" opt; do
   esac
 done
 
+case $ESTRATEGIA in
+  rest|grpc|mensageria) ;;
+  *) echo "Estratégia inválida: $ESTRATEGIA"; exit 1 ;;
+esac
+
 case $MODO in
   postgres) COMPOSE_FILE="$RAIZ/infrastructure/docker/docker-compose.yml" ;;
   mock)     COMPOSE_FILE="$RAIZ/infrastructure/docker/docker-compose.mock.yml" ;;
@@ -53,6 +59,8 @@ esac
 # Lidas pelo docker-compose
 export ESTRATEGIA AMBIENTE
 export COLETA_AUTOMATICA=false
+# O broker (RabbitMQ) só sobe na estratégia de mensageria.
+if [ "$ESTRATEGIA" = mensageria ]; then export COMPOSE_PROFILES=mensageria; else export COMPOSE_PROFILES=; fi
 
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
@@ -64,6 +72,31 @@ aguardar_primeira_requisicao() {
   done
   echo "ERRO: o k6 não enviou requisições em 60 s (ver k6.log)"
   exit 1
+}
+
+# Dorme até o instante (epoch) informado.
+esperar_ate() {
+  sleep "$(awk -v alvo="$1" -v t="$(date +%s.%N)" 'BEGIN { d = alvo - t; printf "%.3f", (d > 0 ? d : 0) }')"
+}
+
+# Amostra CPU e memória de cada contêiner durante a janela de medição. Complementa o
+# coletor, que só enxerga os processos Python: aqui entram também bancos e broker.
+# CPU em % de um núcleo (100 = 1 CPU inteira), memória em MB.
+amostrar_recursos() {
+  local arquivo=$1 inicio=$2 fim
+  fim=$(awk -v i="$inicio" -v d="$MEDICAO" 'BEGIN { printf "%.3f", i + d }')
+  echo "t,container,cpu_pct,mem_mb" > "$arquivo"
+  esperar_ate "$inicio"
+  while awk -v f="$fim" -v t="$(date +%s.%N)" 'BEGIN { exit !(t < f) }'; do
+    # shellcheck disable=SC2046
+    docker stats --no-stream --format '{{.Name}};{{.CPUPerc}};{{.MemUsage}}' $(compose ps -q) 2>/dev/null \
+      | awk -F';' -v t="$(date +%s)" '{
+          cpu = $2; sub(/%/, "", cpu)
+          split($3, m, " / "); mem = m[1]; v = mem + 0
+          if (mem ~ /GiB/) v *= 1024; else if (mem ~ /KiB/) v /= 1024; else if (mem ~ /[0-9]B$/) v /= 1048576
+          printf "%s,%s,%s,%.2f\n", t, $1, cpu, v
+        }' >> "$arquivo"
+  done
 }
 
 aguardar_servicos() {
@@ -92,7 +125,7 @@ for cenario in $CENARIOS; do
     mkdir -p "$dir"
     echo "[$n/$total] $cenario — repetição $rep → metricas/$id"
 
-    compose --profile carga down -v --remove-orphans >/dev/null 2>&1
+    compose --profile carga --profile mensageria down -v --remove-orphans >/dev/null 2>&1
     compose up -d --quiet-pull >/dev/null 2>&1
     aguardar_servicos
 
@@ -105,17 +138,20 @@ for cenario in $CENARIOS; do
     # aquecimento, contado a partir da primeira requisição, e a segunda MEDICAO s depois.
     aguardar_primeira_requisicao
     inicio=$(awk -v t="$(date +%s.%N)" -v a="$AQUECIMENTO" 'BEGIN { printf "%.3f", t + a }')
+    amostrar_recursos "$dir/docker_stats.csv" "$inicio" &
+    stats_pid=$!
     compose exec -T collector python coletar_metricas.py \
       --tipo "$ESTRATEGIA" --ambiente "$AMBIENTE" --cenario "$cenario" --repeticao "$rep" \
       --intervalo "$MEDICAO" --inicio "$inicio" --saida "metricas/$id" > "$dir/coletor.log" 2>&1 \
       || echo "    AVISO: coletor falhou (ver coletor.log)"
 
     wait "$k6_pid" || echo "    AVISO: k6 terminou com erro (ver k6.log)"
+    wait "$stats_pid" || true
     [ -f "$dir/k6_resumo.json" ] || echo "    AVISO: k6_resumo.json não foi gerado"
   done
 done
 
-compose --profile carga down -v --remove-orphans >/dev/null 2>&1
+compose --profile carga --profile mensageria down -v --remove-orphans >/dev/null 2>&1
 
 echo "=== Consolidando resultados ==="
 docker run --rm -v "$RAIZ":/w -w /w/analysis python:3.12-slim python exportar.py
