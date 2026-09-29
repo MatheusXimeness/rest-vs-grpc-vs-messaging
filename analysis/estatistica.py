@@ -150,7 +150,17 @@ def descritiva(df: pd.DataFrame) -> pd.DataFrame:
                 "ic95_inf": media - meia, "ic95_sup": media + meia,
                 "min": x.min(), "max": x.max(),
             })
-    return pd.DataFrame(linhas)
+    return _ordenar(pd.DataFrame(linhas))
+
+
+def _ordenar(df: pd.DataFrame) -> pd.DataFrame:
+    """Mantém a ordem de carga (baixa → rampup) e de estratégia nas tabelas geradas."""
+    if df.empty:
+        return df
+    for col, ordem in (("ambiente", AMBIENTES), ("cenario", CENARIOS), ("estrategia", ESTRATEGIAS)):
+        if col in df:
+            df[col] = pd.Categorical(df[col], ordem, ordered=True)
+    return df.sort_values([c for c in ("ambiente", "cenario", "estrategia") if c in df], kind="stable")
 
 
 def descritiva_md(desc: pd.DataFrame) -> str:
@@ -202,7 +212,7 @@ def testes_estrategias(df: pd.DataFrame) -> pd.DataFrame:
                     "cliff_delta": d, "efeito": magnitude_cliff(d),
                     "significativo": (not math.isnan(p)) and p_adj < ALFA,
                 })
-    return pd.DataFrame(linhas)
+    return _ordenar(pd.DataFrame(linhas))
 
 
 def testes_estrategias_md(t: pd.DataFrame) -> str:
@@ -252,7 +262,7 @@ def testes_ambientes(df: pd.DataFrame) -> pd.DataFrame:
                 "mannwhitney_u": u, "p": p, "cliff_delta_nuvem_vs_local": d, "efeito": magnitude_cliff(d),
                 "brown_forsythe_w": w, "p_variancia": p_var,
             })
-    return pd.DataFrame(linhas)
+    return _ordenar(pd.DataFrame(linhas))
 
 
 def testes_ambientes_md(t: pd.DataFrame) -> str:
@@ -296,7 +306,8 @@ def recursos_md(rc: pd.DataFrame) -> str:
     if rc.empty:
         return "_Sem dados de docker stats._"
     partes = []
-    for (amb, cen), g in rc.groupby(["ambiente", "cenario"], sort=False):
+    rc = _ordenar(rc.copy())
+    for (amb, cen), g in rc.groupby(["ambiente", "cenario"], observed=True):
         piv = g.pivot_table(index="container", columns="estrategia", values="cpu_media_pct")
         piv = piv[[e for e in ESTRATEGIAS if e in piv.columns]]
         tab = pd.DataFrame({"Contêiner": piv.index})
