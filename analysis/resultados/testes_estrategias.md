@@ -89,4 +89,93 @@
 | rampup | Memória total (MB) | < 0,001 | REST × Mensageria | 489,2 × 642,7 | < 0,001 | -1,00 (grande) | sim |
 | rampup | Memória total (MB) | < 0,001 | gRPC × Mensageria | 513,4 × 642,7 | < 0,001 | -1,00 (grande) | sim |
 
+### Ambiente nuvem
+
+| Cenário | Métrica | Kruskal-Wallis p | Par | Medianas | p (Holm) | δ de Cliff | Sig. |
+|---|---|---|---|---|---|---|---|
+| baixa | Latência média (ms) | < 0,001 | REST × gRPC | 16,65 × 13,95 | 0,006 | 0,80 (grande) | sim |
+| baixa | Latência média (ms) | < 0,001 | REST × Mensageria | 16,65 × 16,51 | 0,520 | 0,18 (pequeno) | não |
+| baixa | Latência média (ms) | < 0,001 | gRPC × Mensageria | 13,95 × 16,51 | < 0,001 | -1,00 (grande) | sim |
+| baixa | Latência mediana (ms) | < 0,001 | REST × gRPC | 16,39 × 13,82 | 0,006 | 0,80 (grande) | sim |
+| baixa | Latência mediana (ms) | < 0,001 | REST × Mensageria | 16,39 × 15,73 | 0,006 | 0,80 (grande) | sim |
+| baixa | Latência mediana (ms) | < 0,001 | gRPC × Mensageria | 13,82 × 15,73 | < 0,001 | -1,00 (grande) | sim |
+| baixa | Latência p95 (ms) | < 0,001 | REST × gRPC | 18,20 × 15,20 | < 0,001 | 1,00 (grande) | sim |
+| baixa | Latência p95 (ms) | < 0,001 | REST × Mensageria | 18,20 × 20,56 | 0,140 | -0,40 (médio) | não |
+| baixa | Latência p95 (ms) | < 0,001 | gRPC × Mensageria | 15,20 × 20,56 | < 0,001 | -1,00 (grande) | sim |
+| baixa | Throughput (req/s) | 0,060 | REST × gRPC | 10,00 × 10,02 | 0,075 | -0,50 (grande) | não |
+| baixa | Throughput (req/s) | 0,060 | REST × Mensageria | 10,00 × 10,01 | 0,693 | -0,10 (desprezível) | não |
+| baixa | Throughput (req/s) | 0,060 | gRPC × Mensageria | 10,02 × 10,01 | 0,127 | 0,40 (médio) | não |
+| baixa | Erro técnico (%) | — | REST × gRPC | 0,00 × 0,00 | 1,000 | 0,00 (desprezível) | não |
+| baixa | Erro técnico (%) | — | REST × Mensageria | 0,00 × 0,00 | 1,000 | 0,00 (desprezível) | não |
+| baixa | Erro técnico (%) | — | gRPC × Mensageria | 0,00 × 0,00 | 1,000 | 0,00 (desprezível) | não |
+| baixa | CPU total (% de 1 núcleo) | < 0,001 | REST × gRPC | 16,7 × 14,1 | 0,003 | 0,80 (grande) | sim |
+| baixa | CPU total (% de 1 núcleo) | < 0,001 | REST × Mensageria | 16,7 × 29,8 | < 0,001 | -1,00 (grande) | sim |
+| baixa | CPU total (% de 1 núcleo) | < 0,001 | gRPC × Mensageria | 14,1 × 29,8 | < 0,001 | -1,00 (grande) | sim |
+| baixa | Memória total (MB) | < 0,001 | REST × gRPC | 353,6 × 372,3 | < 0,001 | -1,00 (grande) | sim |
+| baixa | Memória total (MB) | < 0,001 | REST × Mensageria | 353,6 × 499,2 | < 0,001 | -1,00 (grande) | sim |
+| baixa | Memória total (MB) | < 0,001 | gRPC × Mensageria | 372,3 × 499,2 | < 0,001 | -1,00 (grande) | sim |
+| moderada | Latência média (ms) | < 0,001 | REST × gRPC | 16,75 × 14,53 | 0,006 | 0,80 (grande) | sim |
+| moderada | Latência média (ms) | < 0,001 | REST × Mensageria | 16,75 × 17,86 | 0,427 | -0,22 (pequeno) | não |
+| moderada | Latência média (ms) | < 0,001 | gRPC × Mensageria | 14,53 × 17,86 | < 0,001 | -1,00 (grande) | sim |
+| moderada | Latência mediana (ms) | < 0,001 | REST × gRPC | 16,30 × 14,49 | 0,006 | 0,80 (grande) | sim |
+| moderada | Latência mediana (ms) | < 0,001 | REST × Mensageria | 16,30 × 15,52 | 0,006 | 0,78 (grande) | sim |
+| moderada | Latência mediana (ms) | < 0,001 | gRPC × Mensageria | 14,49 × 15,52 | < 0,001 | -1,00 (grande) | sim |
+| moderada | Latência p95 (ms) | < 0,001 | REST × gRPC | 19,16 × 16,18 | 0,006 | 0,80 (grande) | sim |
+| moderada | Latência p95 (ms) | < 0,001 | REST × Mensageria | 19,16 × 35,56 | 0,140 | -0,40 (médio) | não |
+| moderada | Latência p95 (ms) | < 0,001 | gRPC × Mensageria | 16,18 × 35,56 | < 0,001 | -1,00 (grande) | sim |
+| moderada | Throughput (req/s) | 0,018 | REST × gRPC | 100,01 × 100,02 | 0,030 | -0,50 (grande) | sim |
+| moderada | Throughput (req/s) | 0,018 | REST × Mensageria | 100,01 × 100,00 | 0,774 | -0,08 (desprezível) | não |
+| moderada | Throughput (req/s) | 0,018 | gRPC × Mensageria | 100,02 × 100,00 | 0,015 | 0,60 (grande) | sim |
+| moderada | Erro técnico (%) | 0,126 | REST × gRPC | 0,00 × 0,00 | 0,504 | 0,20 (pequeno) | não |
+| moderada | Erro técnico (%) | 0,126 | REST × Mensageria | 0,00 × 0,00 | 0,504 | 0,20 (pequeno) | não |
+| moderada | Erro técnico (%) | 0,126 | gRPC × Mensageria | 0,00 × 0,00 | 1,000 | 0,00 (desprezível) | não |
+| moderada | CPU total (% de 1 núcleo) | < 0,001 | REST × gRPC | 136,3 × 107,9 | 0,006 | 0,80 (grande) | sim |
+| moderada | CPU total (% de 1 núcleo) | < 0,001 | REST × Mensageria | 136,3 × 144,1 | 0,140 | -0,40 (médio) | não |
+| moderada | CPU total (% de 1 núcleo) | < 0,001 | gRPC × Mensageria | 107,9 × 144,1 | < 0,001 | -1,00 (grande) | sim |
+| moderada | Memória total (MB) | < 0,001 | REST × gRPC | 408,9 × 411,1 | 0,473 | -0,20 (pequeno) | não |
+| moderada | Memória total (MB) | < 0,001 | REST × Mensageria | 408,9 × 541,8 | < 0,001 | -1,00 (grande) | sim |
+| moderada | Memória total (MB) | < 0,001 | gRPC × Mensageria | 411,1 × 541,8 | < 0,001 | -1,00 (grande) | sim |
+| alta | Latência média (ms) | < 0,001 | REST × gRPC | 8.401,96 × 5.165,17 | < 0,001 | 1,00 (grande) | sim |
+| alta | Latência média (ms) | < 0,001 | REST × Mensageria | 8.401,96 × 6.247,61 | < 0,001 | 1,00 (grande) | sim |
+| alta | Latência média (ms) | < 0,001 | gRPC × Mensageria | 5.165,17 × 6.247,61 | < 0,001 | -1,00 (grande) | sim |
+| alta | Latência mediana (ms) | < 0,001 | REST × gRPC | 8.168,91 × 5.087,53 | < 0,001 | 1,00 (grande) | sim |
+| alta | Latência mediana (ms) | < 0,001 | REST × Mensageria | 8.168,91 × 6.178,72 | < 0,001 | 1,00 (grande) | sim |
+| alta | Latência mediana (ms) | < 0,001 | gRPC × Mensageria | 5.087,53 × 6.178,72 | < 0,001 | -1,00 (grande) | sim |
+| alta | Latência p95 (ms) | < 0,001 | REST × gRPC | 10.000,66 × 6.834,23 | < 0,001 | 1,00 (grande) | sim |
+| alta | Latência p95 (ms) | < 0,001 | REST × Mensageria | 10.000,66 × 8.042,69 | < 0,001 | 1,00 (grande) | sim |
+| alta | Latência p95 (ms) | < 0,001 | gRPC × Mensageria | 6.834,23 × 8.042,69 | < 0,001 | -1,00 (grande) | sim |
+| alta | Throughput (req/s) | < 0,001 | REST × gRPC | 123,28 × 194,38 | < 0,001 | -1,00 (grande) | sim |
+| alta | Throughput (req/s) | < 0,001 | REST × Mensageria | 123,28 × 162,03 | < 0,001 | -1,00 (grande) | sim |
+| alta | Throughput (req/s) | < 0,001 | gRPC × Mensageria | 194,38 × 162,03 | < 0,001 | 1,00 (grande) | sim |
+| alta | Erro técnico (%) | < 0,001 | REST × gRPC | 17,85 × 0,00 | < 0,001 | 1,00 (grande) | sim |
+| alta | Erro técnico (%) | < 0,001 | REST × Mensageria | 17,85 × 0,23 | < 0,001 | 1,00 (grande) | sim |
+| alta | Erro técnico (%) | < 0,001 | gRPC × Mensageria | 0,00 × 0,23 | < 0,001 | -0,88 (grande) | sim |
+| alta | CPU total (% de 1 núcleo) | < 0,001 | REST × gRPC | 439,3 × 245,9 | < 0,001 | 1,00 (grande) | sim |
+| alta | CPU total (% de 1 núcleo) | < 0,001 | REST × Mensageria | 439,3 × 286,5 | < 0,001 | 1,00 (grande) | sim |
+| alta | CPU total (% de 1 núcleo) | < 0,001 | gRPC × Mensageria | 245,9 × 286,5 | < 0,001 | -1,00 (grande) | sim |
+| alta | Memória total (MB) | < 0,001 | REST × gRPC | 520,1 × 574,2 | < 0,001 | -1,00 (grande) | sim |
+| alta | Memória total (MB) | < 0,001 | REST × Mensageria | 520,1 × 659,3 | < 0,001 | -1,00 (grande) | sim |
+| alta | Memória total (MB) | < 0,001 | gRPC × Mensageria | 574,2 × 659,3 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Latência média (ms) | < 0,001 | REST × gRPC | 4.995,74 × 3.147,33 | < 0,001 | 1,00 (grande) | sim |
+| rampup | Latência média (ms) | < 0,001 | REST × Mensageria | 4.995,74 × 4.191,36 | < 0,001 | 0,92 (grande) | sim |
+| rampup | Latência média (ms) | < 0,001 | gRPC × Mensageria | 3.147,33 × 4.191,36 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Latência mediana (ms) | < 0,001 | REST × gRPC | 6.258,82 × 4.102,50 | < 0,001 | 1,00 (grande) | sim |
+| rampup | Latência mediana (ms) | < 0,001 | REST × Mensageria | 6.258,82 × 5.253,92 | 0,003 | 0,80 (grande) | sim |
+| rampup | Latência mediana (ms) | < 0,001 | gRPC × Mensageria | 4.102,50 × 5.253,92 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Latência p95 (ms) | < 0,001 | REST × gRPC | 8.712,74 × 5.514,57 | < 0,001 | 1,00 (grande) | sim |
+| rampup | Latência p95 (ms) | < 0,001 | REST × Mensageria | 8.712,74 × 6.910,59 | < 0,001 | 1,00 (grande) | sim |
+| rampup | Latência p95 (ms) | < 0,001 | gRPC × Mensageria | 5.514,57 × 6.910,59 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Throughput (req/s) | < 0,001 | REST × gRPC | 121,92 × 161,57 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Throughput (req/s) | < 0,001 | REST × Mensageria | 121,92 × 139,01 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Throughput (req/s) | < 0,001 | gRPC × Mensageria | 161,57 × 139,01 | < 0,001 | 1,00 (grande) | sim |
+| rampup | Erro técnico (%) | < 0,001 | REST × gRPC | 0,98 × 0,00 | < 0,001 | 0,90 (grande) | sim |
+| rampup | Erro técnico (%) | < 0,001 | REST × Mensageria | 0,98 × 0,03 | 0,004 | 0,83 (grande) | sim |
+| rampup | Erro técnico (%) | < 0,001 | gRPC × Mensageria | 0,00 × 0,03 | 0,004 | -0,70 (grande) | sim |
+| rampup | CPU total (% de 1 núcleo) | < 0,001 | REST × gRPC | 333,3 × 192,7 | < 0,001 | 1,00 (grande) | sim |
+| rampup | CPU total (% de 1 núcleo) | < 0,001 | REST × Mensageria | 333,3 × 249,1 | < 0,001 | 1,00 (grande) | sim |
+| rampup | CPU total (% de 1 núcleo) | < 0,001 | gRPC × Mensageria | 192,7 × 249,1 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Memória total (MB) | < 0,001 | REST × gRPC | 457,7 × 468,3 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Memória total (MB) | < 0,001 | REST × Mensageria | 457,7 × 581,8 | < 0,001 | -1,00 (grande) | sim |
+| rampup | Memória total (MB) | < 0,001 | gRPC × Mensageria | 468,3 × 581,8 | < 0,001 | -1,00 (grande) | sim |
+
 δ de Cliff > 0: a primeira estratégia do par tem valores maiores. Significativo: p ajustado por Holm < 0,05.

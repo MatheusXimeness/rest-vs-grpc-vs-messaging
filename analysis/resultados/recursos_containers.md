@@ -55,3 +55,59 @@
 | pedidos | 78,6 | 77,1 | 79,0 |
 | rabbitmq | — | — | 37,9 |
 | usuario | 63,9 | 24,5 | 37,2 |
+
+**nuvem — baixa** (CPU média, % de 1 núcleo)
+
+| Contêiner | REST | gRPC | Mensageria |
+|---|---|---|---|
+| db_estoque | 0,9 | 0,9 | 1,0 |
+| db_pagamento | 0,8 | 0,9 | 0,9 |
+| db_pedidos | 1,0 | 0,9 | 1,0 |
+| db_usuario | 0,8 | 0,8 | 0,8 |
+| estoque | 3,5 | 2,7 | 2,8 |
+| pagamento | 2,7 | 1,8 | 1,9 |
+| pedidos | 4,4 | 4,4 | 4,9 |
+| rabbitmq | — | — | 14,5 |
+| usuario | 2,3 | 1,7 | 1,9 |
+
+**nuvem — moderada** (CPU média, % de 1 núcleo)
+
+| Contêiner | REST | gRPC | Mensageria |
+|---|---|---|---|
+| db_estoque | 5,6 | 3,5 | 3,8 |
+| db_pagamento | 4,2 | 3,0 | 3,1 |
+| db_pedidos | 6,0 | 4,1 | 4,1 |
+| db_usuario | 4,5 | 2,4 | 2,6 |
+| estoque | 36,5 | 24,0 | 25,9 |
+| pagamento | 27,7 | 15,7 | 17,4 |
+| pedidos | 45,3 | 39,6 | 45,0 |
+| rabbitmq | — | — | 25,8 |
+| usuario | 26,6 | 15,3 | 16,7 |
+
+**nuvem — alta** (CPU média, % de 1 núcleo)
+
+| Contêiner | REST | gRPC | Mensageria |
+|---|---|---|---|
+| db_estoque | 24,6 | 20,4 | 15,9 |
+| db_pagamento | 22,6 | 5,6 | 8,9 |
+| db_pedidos | 20,1 | 17,2 | 15,0 |
+| db_usuario | 24,8 | 3,9 | 8,8 |
+| estoque | 81,8 | 55,1 | 43,9 |
+| pagamento | 87,5 | 23,5 | 35,8 |
+| pedidos | 93,5 | 101,3 | 97,4 |
+| rabbitmq | — | — | 31,4 |
+| usuario | 85,1 | 20,8 | 34,2 |
+
+**nuvem — rampup** (CPU média, % de 1 núcleo)
+
+| Contêiner | REST | gRPC | Mensageria |
+|---|---|---|---|
+| db_estoque | 17,7 | 13,5 | 12,6 |
+| db_pagamento | 15,8 | 4,7 | 7,5 |
+| db_pedidos | 14,5 | 11,7 | 10,7 |
+| db_usuario | 17,7 | 3,5 | 8,5 |
+| estoque | 63,9 | 44,7 | 40,4 |
+| pagamento | 65,1 | 21,2 | 31,1 |
+| pedidos | 73,7 | 75,0 | 75,2 |
+| rabbitmq | — | — | 30,0 |
+| usuario | 64,0 | 19,2 | 34,2 |
