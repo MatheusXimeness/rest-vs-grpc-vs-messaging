@@ -128,6 +128,9 @@ for cenario in $CENARIOS; do
     id=$(printf "%s_%s_%s_r%02d_%s" "$ESTRATEGIA" "$AMBIENTE" "$cenario" "$rep" "$(date -u +%Y%m%d_%H%M%S)")
     dir="$RAIZ/metricas/$id"
     mkdir -p "$dir"
+    # O contêiner do k6 roda com usuário próprio (uid 12345): em Linux nativo precisa de
+    # permissão de escrita no diretório (no Docker Desktop o mapeamento já a concedia).
+    chmod a+rwx "$dir"
     echo "[$n/$total] $cenario — repetição $rep → metricas/$id"
 
     compose --profile carga --profile mensageria down -v --remove-orphans >/dev/null 2>&1

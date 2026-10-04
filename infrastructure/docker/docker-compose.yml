@@ -1,16 +1,27 @@
 # Recursos fixos por contêiner (variável de controle do experimento).
 # Os mesmos valores devem ser usados no ambiente em nuvem.
+# O limite de arquivos abertos também é fixado: o Docker Engine em Linux usa 1024 por padrão
+# (o Docker Desktop usa um valor muito maior), e sob carga alta cada conexão consome um
+# descritor, o que faria o ambiente, e não a estratégia, determinar os erros.
+x-limite-arquivos: &limite-arquivos
+  nofile:
+    soft: 65536
+    hard: 65536
+
 x-recursos-servico: &recursos-servico
   cpus: "${CPUS_SERVICO:-1.0}"
   mem_limit: "${MEM_SERVICO:-512m}"
+  ulimits: *limite-arquivos
 
 x-recursos-banco: &recursos-banco
   cpus: "${CPUS_BANCO:-0.5}"
   mem_limit: "${MEM_BANCO:-256m}"
+  ulimits: *limite-arquivos
 
 x-recursos-broker: &recursos-broker
   cpus: "${CPUS_BROKER:-1.0}"
   mem_limit: "${MEM_BROKER:-512m}"
+  ulimits: *limite-arquivos
 
 services:
   db_usuario:
@@ -209,6 +220,7 @@ services:
     profiles: ["carga"]
     cpus: "${CPUS_K6:-2.0}"
     mem_limit: "${MEM_K6:-1g}"
+    ulimits: *limite-arquivos
     environment:
       BASE_URL: "http://pedidos:8000"
     volumes:
